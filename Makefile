@@ -1,4 +1,4 @@
-.PHONY: all build build-fetch build-no-fs release run test clean format format-check help
+.PHONY: all build build-fetch build-no-fs release run test clean format format-check size size-report help
 
 # Default paths for local V4 and V4-front
 V4_PATH ?= ../V4
@@ -66,10 +66,44 @@ run-release: release
 test: build
 	@bash test_smoke.sh
 
+# Show binary size
+size:
+	@echo "📊 Binary Size Report"
+	@echo "────────────────────────────────────────"
+	@if [ -f build/v4-repl ]; then \
+		SIZE=$$(ls -lh build/v4-repl | awk '{print $$5}'); \
+		echo "Debug build:           $$SIZE"; \
+		cp build/v4-repl /tmp/v4-repl-stripped 2>/dev/null && \
+		strip /tmp/v4-repl-stripped 2>/dev/null && \
+		SIZE_STRIPPED=$$(ls -lh /tmp/v4-repl-stripped | awk '{print $$5}'); \
+		echo "Debug (stripped):      $$SIZE_STRIPPED"; \
+		rm -f /tmp/v4-repl-stripped; \
+	else \
+		echo "Debug build not found. Run 'make build' first."; \
+	fi
+	@echo ""
+	@if [ -f build-release/v4-repl ]; then \
+		SIZE=$$(ls -lh build-release/v4-repl | awk '{print $$5}'); \
+		echo "Release build:         $$SIZE"; \
+		cp build-release/v4-repl /tmp/v4-repl-stripped 2>/dev/null && \
+		strip /tmp/v4-repl-stripped 2>/dev/null && \
+		SIZE_STRIPPED=$$(ls -lh /tmp/v4-repl-stripped | awk '{print $$5}'); \
+		echo "Release (stripped):    $$SIZE_STRIPPED"; \
+		rm -f /tmp/v4-repl-stripped; \
+	else \
+		echo "Release build not found. Run 'make release' to create."; \
+	fi
+	@echo "────────────────────────────────────────"
+	@echo "Tip: Run 'make size-report' for detailed analysis"
+
+# Detailed size report
+size-report:
+	@bash size_report.sh
+
 # Clean
 clean:
 	@echo "🧹 Cleaning..."
-	@rm -rf build build-release build-debug build-asan build-ubsan _deps
+	@rm -rf build build-release build-debug build-asan build-ubsan build-opt build-size _deps
 
 # Apply formatting
 format:
@@ -129,6 +163,8 @@ help:
 	@echo "  make run             - Build and run the REPL interactively"
 	@echo "  make run-release     - Run release build"
 	@echo "  make test            - Run smoke tests"
+	@echo "  make size            - Show binary size (quick check)"
+	@echo "  make size-report     - Detailed size analysis with recommendations"
 	@echo "  make clean           - Remove build directories"
 	@echo "  make format          - Format code with clang-format"
 	@echo "  make format-check    - Check formatting without modifying files"
@@ -144,6 +180,8 @@ help:
 	@echo "  make                                    # Build with local dependencies"
 	@echo "  make run                                # Build and run REPL"
 	@echo "  make test                               # Run smoke tests"
+	@echo "  make size                               # Check binary size"
+	@echo "  make size-report                        # Detailed size analysis"
 	@echo "  make build V4_PATH=/path/to/V4          # Use custom V4 path"
 	@echo "  make build-no-fs                        # Build for embedded (no filesystem)"
 	@echo "  make release                            # Optimized release build"

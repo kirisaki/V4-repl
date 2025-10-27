@@ -16,7 +16,8 @@ extern "C" {
 static const char* PROMPT = "v4> ";
 static const int MAX_HISTORY = 1000;
 
-Repl::Repl() : vm_(nullptr) {
+Repl::Repl() : vm_(nullptr), compiler_ctx_(nullptr), word_bufs_(nullptr),
+               word_buf_count_(0), word_buf_capacity_(0) {
   // Initialize VM memory to zero
   memset(vm_memory_, 0, sizeof(vm_memory_));
 
@@ -34,6 +35,14 @@ Repl::Repl() : vm_(nullptr) {
     exit(1);
   }
 
+  // Create compiler context
+  compiler_ctx_ = v4front_context_create();
+  if (!compiler_ctx_) {
+    fprintf(stderr, "Failed to create compiler context\n");
+    vm_destroy(vm_);
+    exit(1);
+  }
+
 #ifdef WITH_FILESYSTEM
   init_history();
 #endif
@@ -44,10 +53,21 @@ Repl::~Repl() {
   save_history();
 #endif
 
+  if (compiler_ctx_) {
+    v4front_context_destroy(compiler_ctx_);
+    compiler_ctx_ = nullptr;
+  }
+
   if (vm_) {
     vm_destroy(vm_);
     vm_ = nullptr;
   }
+
+  // Free all tracked word definition buffers
+  for (int i = 0; i < word_buf_count_; ++i) {
+    v4front_free(&word_bufs_[i]);
+  }
+  free(word_bufs_);
 }
 
 #ifdef WITH_FILESYSTEM
@@ -111,36 +131,69 @@ int Repl::eval_line(const char* line) {
     return 0;
   }
 
-  // Compile the input
+  // Compile the input with context and detailed error information
   V4FrontBuf buf;
   memset(&buf, 0, sizeof(buf));
 
-  char errmsg[256];
-  v4front_err err = v4front_compile(line, &buf, errmsg, sizeof(errmsg));
+  V4FrontError error;
+  v4front_err err = v4front_compile_with_context_ex(
+    compiler_ctx_,
+    line,
+    &buf,
+    &error
+  );
 
   if (err != 0) {
-    print_error(errmsg, err);
+    // Format and display detailed error message
+    char formatted_error[1024];
+    v4front_format_error(&error, line, formatted_error, sizeof(formatted_error));
+    fprintf(stderr, "%s\n", formatted_error);
     return -1;
   }
 
-  // If word definitions are present, reset VM
-  // This ensures word indices start from 0, matching V4-front's compilation
-  // Note: This clears the stack as a Phase 1 limitation
-  if (buf.word_count > 0) {
-    vm_reset(vm_);
-  }
-
-  // Register any defined words FIRST (before executing main code)
+  // Register any defined words to VM and compiler context
   for (int i = 0; i < buf.word_count; ++i) {
     V4FrontWord* word = &buf.words[i];
+
+    // Register to VM
     int wid = vm_register_word(vm_, word->name, word->code,
                                 static_cast<int>(word->code_len));
 
     if (wid < 0) {
       print_error("Failed to register word definition", wid);
-      v4front_free(&buf);
+      if (buf.word_count == 0) {
+        v4front_free(&buf);
+      }
       return -1;
     }
+
+    // Register to compiler context
+    v4front_err ctx_err = v4front_context_register_word(compiler_ctx_, word->name, wid);
+    if (ctx_err != 0) {
+      print_error("Failed to register word to compiler context", ctx_err);
+      if (buf.word_count == 0) {
+        v4front_free(&buf);
+      }
+      return -1;
+    }
+  }
+
+  // If we defined any words, save the buffer (VM holds pointers to the bytecode)
+  bool has_word_defs = (buf.word_count > 0);
+  if (has_word_defs) {
+    // Grow word_bufs_ array if needed
+    if (word_buf_count_ >= word_buf_capacity_) {
+      int new_cap = (word_buf_capacity_ == 0) ? 16 : (word_buf_capacity_ * 2);
+      V4FrontBuf* new_bufs = (V4FrontBuf*)realloc(word_bufs_, new_cap * sizeof(V4FrontBuf));
+      if (!new_bufs) {
+        print_error("Out of memory tracking word definitions", 0);
+        return -1;
+      }
+      word_bufs_ = new_bufs;
+      word_buf_capacity_ = new_cap;
+    }
+    // Save this buffer (will be freed in destructor)
+    word_bufs_[word_buf_count_++] = buf;
   }
 
   // Register and execute main code
@@ -149,27 +202,36 @@ int Repl::eval_line(const char* line) {
 
     if (wid < 0) {
       print_error("Failed to register word", wid);
-      v4front_free(&buf);
+      if (!has_word_defs) {
+        v4front_free(&buf);
+      }
       return -1;
     }
 
     struct Word* entry = vm_get_word(vm_, wid);
     if (!entry) {
       print_error("Failed to get word entry", 0);
-      v4front_free(&buf);
+      if (!has_word_defs) {
+        v4front_free(&buf);
+      }
       return -1;
     }
 
     v4_err exec_err = vm_exec(vm_, entry);
     if (exec_err != 0) {
       print_error("Execution failed", exec_err);
-      v4front_free(&buf);
+      if (!has_word_defs) {
+        v4front_free(&buf);
+      }
       return -1;
     }
   }
 
-  // Free compiler output
-  v4front_free(&buf);
+  // Free compiler output if no word definitions
+  // (word definitions are kept alive and freed in destructor)
+  if (!has_word_defs) {
+    v4front_free(&buf);
+  }
 
   return 0;  // Success
 }

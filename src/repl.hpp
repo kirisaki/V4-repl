@@ -8,21 +8,26 @@
  *
  * Provides a read-eval-print loop with optional history support
  * when compiled with WITH_FILESYSTEM=1.
+ *
+ * Features:
+ * - Persistent word definitions across lines
+ * - Stack preservation
+ * - Detailed error messages with position information
  */
 class Repl {
 public:
   /**
    * @brief Construct a new REPL instance
    *
-   * Initializes VM with default configuration and loads history
-   * (if filesystem support is enabled).
+   * Initializes VM and compiler context with default configuration.
+   * Loads history if filesystem support is enabled.
    */
   Repl();
 
   /**
    * @brief Destroy the REPL instance
    *
-   * Saves history (if enabled) and frees VM resources.
+   * Saves history (if enabled) and frees all resources.
    */
   ~Repl();
 
@@ -37,7 +42,13 @@ public:
 
 private:
   struct Vm* vm_;
+  V4FrontContext* compiler_ctx_;
   uint8_t vm_memory_[16384];  // 16KB RAM for VM
+
+  // Track word definition buffers (must not be freed while VM is alive)
+  V4FrontBuf* word_bufs_;
+  int word_buf_count_;
+  int word_buf_capacity_;
 
 #ifdef WITH_FILESYSTEM
   char history_path_[256];

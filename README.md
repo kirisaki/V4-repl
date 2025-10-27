@@ -5,6 +5,9 @@ Interactive Forth REPL for the V4 virtual machine.
 ## Features
 
 - Interactive command-line interface with linenoise
+- **Persistent word definitions across lines** - define words on one line, use them on subsequent lines
+- **Stack preservation** - stack contents are maintained across all operations
+- **Detailed error messages** - error position information with visual indicators
 - Stack display after each command
 - Command history (when filesystem support is enabled)
 - Compile-time configurable for embedded systems
@@ -75,6 +78,8 @@ make build-no-fs  # Build without filesystem support
 make release      # Release build
 make run          # Build and run REPL
 make test         # Run smoke tests
+make size         # Quick binary size check
+make size-report  # Detailed size analysis with recommendations
 make clean        # Clean build artifacts
 make format       # Format code
 make asan         # Build with AddressSanitizer
@@ -95,11 +100,17 @@ v4> 1 2 +
 v4> DUP *
  ok [1]: 9
 
-v4> .
-9 ok
+v4> : SQUARE DUP * ;
+ ok
 
-v4> : SQUARE DUP * ; 5 SQUARE
+v4> 5 SQUARE
  ok [1]: 25
+
+v4> : DOUBLE DUP + ;
+ ok [1]: 25
+
+v4> 3 DOUBLE
+ ok [2]: 25 6
 
 v4> bye
 Goodbye!
@@ -129,42 +140,50 @@ If the stack is empty:
 - Ctrl+D - Exit the REPL
 - Any valid V4 Forth code
 
-## Limitations (Phase 1)
+## Features in Detail
 
-### Word definitions must be on the same line as their usage
+This version includes stateful compilation and detailed error reporting:
 
-Due to the stateless nature of V4-front's compiler, word definitions are only available within the same compilation unit (i.e., the same input line).
+### Persistent Word Definitions
 
-**This works:**
-```forth
-v4> : SQUARE DUP * ; 5 SQUARE
- ok [1]: 25
-```
+Words can now be defined on one line and used on subsequent lines:
 
-**This does NOT work:**
 ```forth
 v4> : SQUARE DUP * ;
  ok
+
 v4> 5 SQUARE
-Error [-1]: unknown token
+ ok [1]: 25
+
+v4> 7 SQUARE
+ ok [1]: 49
 ```
 
-### Word definitions clear the stack
+### Stack Preservation
 
-When a line contains word definitions (`:` ... `;`), the VM is reset to ensure correct word indexing. This clears the data stack as a side effect.
+The data stack is preserved across all operations, including word definitions:
 
 ```forth
-v4> 1 2 +
- ok [1]: 3
+v4> 10 20
+ ok [2]: 10 20
 
-v4> 10 20 +
- ok [2]: 3 30        # Stack is preserved
+v4> : DOUBLE DUP + ;
+ ok [2]: 10 20        # Stack preserved!
 
-v4> : DOUBLE DUP + ; 5 DOUBLE
- ok [1]: 10          # Stack was cleared due to word definition
+v4> 30 DOUBLE
+ ok [3]: 10 20 60
 ```
 
-**Workaround:** Use upcoming Phase 2 features for persistent word definitions, or design calculations to complete within single lines.
+### Detailed Error Messages
+
+Errors now show the exact position with visual indicators:
+
+```forth
+v4> 1 2 UNKNOWN +
+Error: unknown token at line 1, column 5
+  1 2 UNKNOWN +
+      ^~~~~~~
+```
 
 ## History
 
@@ -183,18 +202,44 @@ The project is compiled with:
 
 This makes it suitable for embedded systems and resource-constrained environments.
 
+## Binary Size
+
+v4-repl is designed to be compact and suitable for embedded systems:
+
+| Build Type | Size | Use Case |
+|------------|------|----------|
+| Debug | 143KB | Development (includes debug symbols) |
+| Debug (stripped) | 59KB | Testing without debugger |
+| Release (stripped) | **67KB** | **Production (recommended)** |
+| MinSizeRel (stripped) | ~60KB | Size-critical embedded systems |
+
+Check binary size:
+```bash
+make size         # Quick check
+make size-report  # Detailed analysis with recommendations
+```
+
+The compact size makes v4-repl ideal for:
+- Embedded devices (ESP32, STM32, etc.)
+- IoT applications
+- Resource-constrained environments
+- Quick deployment without large dependencies
+
 ## Project Structure
 
 ```
 V4-repl/
-├── CMakeLists.txt      # Build configuration
-├── README.md           # This file
+├── CMakeLists.txt          # Build configuration
+├── Makefile                # Convenient build targets
+├── README.md               # This file
 ├── .gitignore
 ├── src/
-│   ├── main.cpp        # Entry point
-│   ├── repl.hpp        # REPL class interface
-│   └── repl.cpp        # REPL implementation
-└── build/              # Build directory (generated)
+│   ├── main.cpp            # Entry point
+│   ├── repl.hpp            # REPL class interface
+│   └── repl.cpp            # REPL implementation
+├── test_smoke.sh           # Smoke test script
+├── size_report.sh          # Binary size analysis script
+└── build/                  # Build directory (generated)
 ```
 
 ## License
