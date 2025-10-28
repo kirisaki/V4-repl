@@ -4,6 +4,7 @@ Interactive Forth REPL for the V4 virtual machine.
 
 ## Features
 
+### Core Features
 - Interactive command-line interface with linenoise
 - **Persistent word definitions across lines** - define words on one line, use them on subsequent lines
 - **Stack preservation** - stack contents are maintained across all operations
@@ -11,6 +12,12 @@ Interactive Forth REPL for the V4 virtual machine.
 - Stack display after each command
 - Command history (when filesystem support is enabled)
 - Compile-time configurable for embedded systems
+
+### Advanced Features (v0.2.0+)
+- **🔧 Meta-commands** - Built-in commands for REPL control and inspection (`.words`, `.stack`, `.reset`, `.memory`, `.help`, `.version`)
+- **📝 PASTE mode** - Multi-line input mode for complex word definitions (`<<<` to enter, `>>>` to execute)
+- **⚡ Ctrl+C interrupt handling** - Safely interrupt long-running operations without crashing the REPL
+- **📚 Comprehensive documentation** - User guide and meta-commands reference
 
 ## Requirements
 
@@ -87,33 +94,112 @@ make ubsan        # Build with UndefinedBehaviorSanitizer
 make help         # Show all targets
 ```
 
-## Usage
+## Quick Start
 
 ```bash
-$ ./v4-repl
-V4 REPL v0.1.0
+# Build and run
+make run
+
+# Or run directly
+./build/v4-repl
+```
+
+## Usage Examples
+
+### Basic Arithmetic
+
+```bash
+$ ./build/v4-repl
+V4 REPL v0.2.0
 Type 'bye' or press Ctrl+D to exit
+Type '.help' for help
+Type '<<<' to enter PASTE mode
 
 v4> 1 2 +
  ok [1]: 3
 
-v4> DUP *
- ok [1]: 9
+v4> 10 5 - 2 *
+ ok [1]: 10
+```
 
+### Word Definitions
+
+```forth
 v4> : SQUARE DUP * ;
  ok
 
 v4> 5 SQUARE
  ok [1]: 25
 
-v4> : DOUBLE DUP + ;
- ok [1]: 25
+v4> : DOUBLE 2 * ;
+ ok
 
-v4> 3 DOUBLE
- ok [2]: 25 6
+v4> : QUADRUPLE DOUBLE DOUBLE ;
+ ok
 
-v4> bye
-Goodbye!
+v4> 3 QUADRUPLE
+ ok [1]: 12
+```
+
+### Meta-Commands
+
+```forth
+v4> : TEST 42 ;
+ ok
+
+v4> .words
+Defined words (1):
+  TEST
+ ok
+
+v4> 10 20 30
+ ok [3]: 10 20 30
+
+v4> .stack
+Data Stack (depth: 3):
+  [0]: 10 (0x0000000A)
+  [1]: 20 (0x00000014)
+  [2]: 30 (0x0000001E)
+
+Return Stack: <not yet implemented>
+ ok [3]: 10 20 30
+
+v4> .help
+( Shows comprehensive help )
+```
+
+### PASTE Mode (Multi-line Input)
+
+```forth
+v4> <<<
+Entering PASTE mode. Type '>>>' to compile and execute.
+... : FACTORIAL
+...   DUP 1 >
+...   IF DUP 1 - FACTORIAL *
+...   ELSE DROP 1
+...   THEN
+... ;
+... >>>
+ ok
+
+v4> 5 FACTORIAL
+ ok [1]: 120
+```
+
+### Interrupt Handling
+
+Press `Ctrl+C` during execution to safely interrupt:
+
+```forth
+v4> : FOREVER BEGIN 1 UNTIL ;
+ ok
+
+v4> FOREVER
+^C
+Execution interrupted
+ ok
+
+v4> ( REPL continues normally )
 ```
 
 ## Stack Display Format
@@ -136,13 +222,39 @@ If the stack is empty:
 
 ## Commands
 
+### Exit Commands
 - `bye` or `quit` - Exit the REPL
-- Ctrl+D - Exit the REPL
+- `Ctrl+D` - Exit the REPL
+
+### Control Keys
+- `Ctrl+C` - Interrupt current execution
+- `Ctrl+A` / `Home` - Move to start of line
+- `Ctrl+E` / `End` - Move to end of line
+- `Ctrl+K` - Delete to end of line
+- `Ctrl+U` - Delete entire line
+- `↑` / `↓` - Navigate command history
+
+### Meta-Commands
+- `.help` - Show comprehensive help
+- `.words` - List all defined words
+- `.stack` - Show detailed stack contents
+- `.reset` - Reset VM and compiler context
+- `.memory` - Show memory usage statistics
+- `.version` - Show version information
+
+### PASTE Mode
+- `<<<` - Enter multi-line input mode
+- `>>>` - Exit PASTE mode and compile/execute
+
+### Forth Language
 - Any valid V4 Forth code
 
-## Features in Detail
+## Documentation
 
-This version includes stateful compilation and detailed error reporting:
+📖 **[User Guide](docs/user-guide.md)** - Complete guide to using the REPL
+📖 **[Meta-Commands Reference](docs/meta-commands.md)** - Detailed documentation for all meta-commands
+
+## Features in Detail
 
 ### Persistent Word Definitions
 
@@ -176,7 +288,7 @@ v4> 30 DOUBLE
 
 ### Detailed Error Messages
 
-Errors now show the exact position with visual indicators:
+Errors show the exact position with visual indicators:
 
 ```forth
 v4> 1 2 UNKNOWN +
@@ -184,6 +296,76 @@ Error: unknown token at line 1, column 5
   1 2 UNKNOWN +
       ^~~~~~~
 ```
+
+### Meta-Commands
+
+Built-in commands for REPL control and inspection:
+
+```forth
+v4> : DOUBLE 2 * ;
+ ok
+
+v4> : TRIPLE 3 * ;
+ ok
+
+v4> .words
+Defined words (2):
+  DOUBLE
+  TRIPLE
+ ok
+
+v4> 42 100
+ ok [2]: 42 100
+
+v4> .stack
+Data Stack (depth: 2):
+  [0]: 42 (0x0000002A)
+  [1]: 100 (0x00000064)
+ ok [2]: 42 100
+
+v4> .reset
+VM and compiler context reset.
+ ok
+
+v4> .words
+No words defined.
+ ok
+```
+
+### PASTE Mode
+
+Multi-line input mode for complex definitions:
+
+```forth
+v4> <<<
+Entering PASTE mode. Type '>>>' to compile and execute.
+... : ABS
+...   DUP 0 <
+...   IF NEGATE
+...   THEN
+... ;
+... >>>
+ ok
+
+v4> -42 ABS
+ ok [1]: 42
+```
+
+Benefits:
+- Easier entry of multi-line word definitions
+- Better for control structures (IF/THEN/ELSE, BEGIN/UNTIL, etc.)
+- Visual feedback with changed prompt (`...`)
+- Can be interrupted with `Ctrl+C`
+
+### Interrupt Handling
+
+Safe interruption of long-running operations:
+
+- Press `Ctrl+C` during execution to interrupt
+- Clears the data stack
+- Returns to REPL prompt
+- Works in both normal and PASTE mode
+- REPL remains stable after interrupt
 
 ## History
 
@@ -232,11 +414,17 @@ V4-repl/
 ├── CMakeLists.txt          # Build configuration
 ├── Makefile                # Convenient build targets
 ├── README.md               # This file
+├── .clang-format           # Code formatting rules
 ├── .gitignore
 ├── src/
 │   ├── main.cpp            # Entry point
 │   ├── repl.hpp            # REPL class interface
-│   └── repl.cpp            # REPL implementation
+│   ├── repl.cpp            # REPL implementation
+│   ├── meta_commands.hpp   # Meta-commands interface
+│   └── meta_commands.cpp   # Meta-commands implementation
+├── docs/
+│   ├── user-guide.md       # Complete user guide
+│   └── meta-commands.md    # Meta-commands reference
 ├── test_smoke.sh           # Smoke test script
 ├── size_report.sh          # Binary size analysis script
 └── build/                  # Build directory (generated)
