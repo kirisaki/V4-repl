@@ -1,5 +1,8 @@
 #include "repl.hpp"
 
+#include <signal.h>
+#include <unistd.h>
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -10,11 +13,24 @@ extern "C" {
 
 #ifdef WITH_FILESYSTEM
 #include <sys/stat.h>
-#include <unistd.h>
 #endif
 
 static const char* PROMPT = "v4> ";
 static const int MAX_HISTORY = 1000;
+
+// Global interrupt flag for Ctrl+C handling
+static volatile sig_atomic_t g_interrupted = 0;
+
+// Signal handler for Ctrl+C
+static void sigint_handler(int sig) {
+  (void) sig;
+  g_interrupted = 1;
+
+  // Safe message output (signal-safe)
+  const char msg[] = "\n^C\n";
+  ssize_t written = write(STDERR_FILENO, msg, sizeof(msg) - 1);
+  (void) written;  // Suppress unused warning
+}
 
 Repl::Repl()
     : vm_(nullptr),
@@ -54,6 +70,13 @@ Repl::Repl()
 
   // Initialize meta-commands handler
   meta_cmds_ = MetaCommands(vm_, compiler_ctx_);
+
+  // Set up Ctrl+C signal handler
+  struct sigaction sa;
+  sa.sa_handler = sigint_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sigaction(SIGINT, &sa, nullptr);
 
 #ifdef WITH_FILESYSTEM
   init_history();
@@ -196,6 +219,9 @@ const char* Repl::get_prompt() const {
 }
 
 int Repl::eval_line(const char* line) {
+  // Clear interrupt flag at the start of evaluation
+  g_interrupted = 0;
+
   // Check for PASTE mode markers
   if (is_paste_marker(line)) {
     // Skip whitespace
@@ -264,6 +290,14 @@ int Repl::eval_line(const char* line) {
   // Check for meta-commands
   if (meta_cmds_.execute(line)) {
     return 0;  // Meta-command executed
+  }
+
+  // Check for interrupt before compilation
+  if (g_interrupted) {
+    fprintf(stderr, "Interrupted\n");
+    vm_ds_clear(vm_);
+    g_interrupted = 0;
+    return -1;
   }
 
   // Compile the input with context and detailed error information
@@ -345,6 +379,18 @@ int Repl::eval_line(const char* line) {
     }
 
     v4_err exec_err = vm_exec(vm_, entry);
+
+    // Check for interrupt after execution
+    if (g_interrupted) {
+      fprintf(stderr, "Execution interrupted\n");
+      vm_ds_clear(vm_);
+      g_interrupted = 0;
+      if (!has_word_defs) {
+        v4front_free(&buf);
+      }
+      return -1;
+    }
+
     if (exec_err != 0) {
       print_error("Execution failed", exec_err);
       if (!has_word_defs) {
@@ -370,12 +416,28 @@ int Repl::run() {
   printf("Type '<<<' to enter PASTE mode\n\n");
 
   while (true) {
+    // Clear interrupt flag before reading input
+    g_interrupted = 0;
+
     char* line = linenoise(get_prompt());
 
     // Ctrl+D pressed
     if (!line) {
       printf("\nGoodbye!\n");
       break;
+    }
+
+    // Check if interrupted during input
+    if (g_interrupted) {
+      linenoiseFree(line);
+      // If in PASTE mode, exit it
+      if (paste_mode_) {
+        paste_mode_ = false;
+        paste_buffer_size_ = 0;
+        printf("PASTE mode interrupted\n");
+      }
+      g_interrupted = 0;
+      continue;
     }
 
     // Evaluate the line
