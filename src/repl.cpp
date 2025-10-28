@@ -22,7 +22,11 @@ Repl::Repl()
       meta_cmds_(nullptr, nullptr),
       word_bufs_(nullptr),
       word_buf_count_(0),
-      word_buf_capacity_(0) {
+      word_buf_capacity_(0),
+      paste_mode_(false),
+      paste_buffer_(nullptr),
+      paste_buffer_size_(0),
+      paste_buffer_capacity_(0) {
   // Initialize VM memory to zero
   memset(vm_memory_, 0, sizeof(vm_memory_));
 
@@ -76,6 +80,9 @@ Repl::~Repl() {
     v4front_free(&word_bufs_[i]);
   }
   free(word_bufs_);
+
+  // Free PASTE buffer
+  free(paste_buffer_);
 }
 
 #ifdef WITH_FILESYSTEM
@@ -128,7 +135,122 @@ void Repl::print_error(const char* msg, int code) {
   }
 }
 
+bool Repl::is_paste_marker(const char* line) {
+  // Skip leading whitespace
+  while (*line == ' ' || *line == '\t') {
+    line++;
+  }
+
+  if (strncmp(line, "<<<", 3) == 0) {
+    // Check that it's just <<< with optional trailing whitespace
+    const char* p = line + 3;
+    while (*p == ' ' || *p == '\t' || *p == '\n')
+      p++;
+    return (*p == '\0');
+  }
+
+  if (strncmp(line, ">>>", 3) == 0) {
+    // Check that it's just >>> with optional trailing whitespace
+    const char* p = line + 3;
+    while (*p == ' ' || *p == '\t' || *p == '\n')
+      p++;
+    return (*p == '\0');
+  }
+
+  return false;
+}
+
+void Repl::enter_paste_mode() {
+  paste_mode_ = true;
+  paste_buffer_size_ = 0;
+  if (paste_buffer_) {
+    paste_buffer_[0] = '\0';
+  }
+  printf("Entering PASTE mode. Type '>>>' to compile and execute.\n");
+}
+
+void Repl::exit_paste_mode() {
+  paste_mode_ = false;
+
+  if (paste_buffer_size_ == 0 || !paste_buffer_) {
+    printf("(empty PASTE buffer)\n");
+    return;
+  }
+
+  // Compile and execute the buffered code
+  int result = eval_line(paste_buffer_);
+
+  if (result == 0) {
+    print_stack();
+  }
+
+  // Clear buffer
+  paste_buffer_size_ = 0;
+  if (paste_buffer_) {
+    paste_buffer_[0] = '\0';
+  }
+}
+
+const char* Repl::get_prompt() const {
+  return paste_mode_ ? "... " : "v4> ";
+}
+
 int Repl::eval_line(const char* line) {
+  // Check for PASTE mode markers
+  if (is_paste_marker(line)) {
+    // Skip whitespace
+    while (*line == ' ' || *line == '\t')
+      line++;
+
+    if (strncmp(line, "<<<", 3) == 0) {
+      if (paste_mode_) {
+        printf("Already in PASTE mode\n");
+      } else {
+        enter_paste_mode();
+      }
+      return 0;
+    } else {  // >>>
+      if (!paste_mode_) {
+        printf("Not in PASTE mode\n");
+      } else {
+        exit_paste_mode();
+      }
+      return 0;
+    }
+  }
+
+  // If in PASTE mode, accumulate lines
+  if (paste_mode_) {
+    int line_len = strlen(line);
+    int needed = paste_buffer_size_ + line_len + 2;  // +2 for '\n' and '\0'
+
+    // Grow buffer if needed
+    if (needed > paste_buffer_capacity_) {
+      int new_cap = (paste_buffer_capacity_ == 0) ? 1024 : (paste_buffer_capacity_ * 2);
+      while (new_cap < needed) {
+        new_cap *= 2;
+      }
+
+      char* new_buf = (char*) realloc(paste_buffer_, new_cap);
+      if (!new_buf) {
+        fprintf(stderr, "Out of memory in PASTE mode\n");
+        paste_mode_ = false;
+        return -1;
+      }
+
+      paste_buffer_ = new_buf;
+      paste_buffer_capacity_ = new_cap;
+    }
+
+    // Append line with newline
+    strcpy(paste_buffer_ + paste_buffer_size_, line);
+    paste_buffer_size_ += line_len;
+    paste_buffer_[paste_buffer_size_++] = '\n';
+    paste_buffer_[paste_buffer_size_] = '\0';
+
+    return 0;  // Continue accumulating
+  }
+
   // Check for exit command
   if (strcmp(line, "bye") == 0 || strcmp(line, "quit") == 0) {
     return 1;  // Signal to exit
@@ -244,10 +366,11 @@ int Repl::eval_line(const char* line) {
 int Repl::run() {
   printf("V4 REPL v0.2.0\n");
   printf("Type 'bye' or press Ctrl+D to exit\n");
-  printf("Type '.help' for help\n\n");
+  printf("Type '.help' for help\n");
+  printf("Type '<<<' to enter PASTE mode\n\n");
 
   while (true) {
-    char* line = linenoise(PROMPT);
+    char* line = linenoise(get_prompt());
 
     // Ctrl+D pressed
     if (!line) {

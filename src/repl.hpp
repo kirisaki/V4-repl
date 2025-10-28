@@ -54,6 +54,12 @@ class Repl {
   int word_buf_count_;
   int word_buf_capacity_;
 
+  // PASTE mode state
+  bool paste_mode_;
+  char* paste_buffer_;
+  int paste_buffer_size_;
+  int paste_buffer_capacity_;
+
 #ifdef WITH_FILESYSTEM
   char history_path_[256];
   void init_history();
@@ -84,4 +90,24 @@ class Repl {
    * @return 0 on success, -1 on error, 1 to exit
    */
   int eval_line(const char* line);
+
+  /**
+   * @brief Check if line is a PASTE mode marker (<<< or >>>)
+   */
+  bool is_paste_marker(const char* line);
+
+  /**
+   * @brief Enter PASTE mode for multi-line input
+   */
+  void enter_paste_mode();
+
+  /**
+   * @brief Exit PASTE mode and compile buffered input
+   */
+  void exit_paste_mode();
+
+  /**
+   * @brief Get the current prompt string
+   */
+  const char* get_prompt() const;
 };
