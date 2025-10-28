@@ -161,9 +161,8 @@ int Repl::eval_line(const char* line) {
 
     if (wid < 0) {
       print_error("Failed to register word definition", wid);
-      if (buf.word_count == 0) {
-        v4front_free(&buf);
-      }
+      // Error during word registration - buffer not yet saved, must free
+      v4front_free(&buf);
       return -1;
     }
 
@@ -171,9 +170,8 @@ int Repl::eval_line(const char* line) {
     v4front_err ctx_err = v4front_context_register_word(compiler_ctx_, word->name, wid);
     if (ctx_err != 0) {
       print_error("Failed to register word to compiler context", ctx_err);
-      if (buf.word_count == 0) {
-        v4front_free(&buf);
-      }
+      // Error during word registration - buffer not yet saved, must free
+      v4front_free(&buf);
       return -1;
     }
   }
@@ -237,7 +235,7 @@ int Repl::eval_line(const char* line) {
 }
 
 int Repl::run() {
-  printf("V4 REPL v0.1.0\n");
+  printf("V4 REPL v0.1.1\n");
   printf("Type 'bye' or press Ctrl+D to exit\n\n");
 
   while (true) {
