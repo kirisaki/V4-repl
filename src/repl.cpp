@@ -9,15 +9,20 @@ extern "C" {
 }
 
 #ifdef WITH_FILESYSTEM
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 static const char* PROMPT = "v4> ";
 static const int MAX_HISTORY = 1000;
 
-Repl::Repl() : vm_(nullptr), compiler_ctx_(nullptr), word_bufs_(nullptr),
-               word_buf_count_(0), word_buf_capacity_(0) {
+Repl::Repl()
+    : vm_(nullptr),
+      compiler_ctx_(nullptr),
+      meta_cmds_(nullptr, nullptr),
+      word_bufs_(nullptr),
+      word_buf_count_(0),
+      word_buf_capacity_(0) {
   // Initialize VM memory to zero
   memset(vm_memory_, 0, sizeof(vm_memory_));
 
@@ -42,6 +47,9 @@ Repl::Repl() : vm_(nullptr), compiler_ctx_(nullptr), word_bufs_(nullptr),
     vm_destroy(vm_);
     exit(1);
   }
+
+  // Initialize meta-commands handler
+  meta_cmds_ = MetaCommands(vm_, compiler_ctx_);
 
 #ifdef WITH_FILESYSTEM
   init_history();
@@ -131,17 +139,17 @@ int Repl::eval_line(const char* line) {
     return 0;
   }
 
+  // Check for meta-commands
+  if (meta_cmds_.execute(line)) {
+    return 0;  // Meta-command executed
+  }
+
   // Compile the input with context and detailed error information
   V4FrontBuf buf;
   memset(&buf, 0, sizeof(buf));
 
   V4FrontError error;
-  v4front_err err = v4front_compile_with_context_ex(
-    compiler_ctx_,
-    line,
-    &buf,
-    &error
-  );
+  v4front_err err = v4front_compile_with_context_ex(compiler_ctx_, line, &buf, &error);
 
   if (err != 0) {
     // Format and display detailed error message
@@ -156,8 +164,7 @@ int Repl::eval_line(const char* line) {
     V4FrontWord* word = &buf.words[i];
 
     // Register to VM
-    int wid = vm_register_word(vm_, word->name, word->code,
-                                static_cast<int>(word->code_len));
+    int wid = vm_register_word(vm_, word->name, word->code, static_cast<int>(word->code_len));
 
     if (wid < 0) {
       print_error("Failed to register word definition", wid);
@@ -182,7 +189,7 @@ int Repl::eval_line(const char* line) {
     // Grow word_bufs_ array if needed
     if (word_buf_count_ >= word_buf_capacity_) {
       int new_cap = (word_buf_capacity_ == 0) ? 16 : (word_buf_capacity_ * 2);
-      V4FrontBuf* new_bufs = (V4FrontBuf*)realloc(word_bufs_, new_cap * sizeof(V4FrontBuf));
+      V4FrontBuf* new_bufs = (V4FrontBuf*) realloc(word_bufs_, new_cap * sizeof(V4FrontBuf));
       if (!new_bufs) {
         print_error("Out of memory tracking word definitions", 0);
         return -1;
@@ -235,8 +242,9 @@ int Repl::eval_line(const char* line) {
 }
 
 int Repl::run() {
-  printf("V4 REPL v0.1.1\n");
-  printf("Type 'bye' or press Ctrl+D to exit\n\n");
+  printf("V4 REPL v0.2.0\n");
+  printf("Type 'bye' or press Ctrl+D to exit\n");
+  printf("Type '.help' for help\n\n");
 
   while (true) {
     char* line = linenoise(PROMPT);

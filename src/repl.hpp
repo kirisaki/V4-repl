@@ -3,6 +3,8 @@
 #include <v4/vm_api.h>
 #include <v4front/compile.h>
 
+#include "meta_commands.hpp"
+
 /**
  * @brief Interactive REPL for V4 Forth VM
  *
@@ -13,9 +15,10 @@
  * - Persistent word definitions across lines
  * - Stack preservation
  * - Detailed error messages with position information
+ * - Meta-commands for REPL control (.words, .stack, .reset, etc.)
  */
 class Repl {
-public:
+ public:
   /**
    * @brief Construct a new REPL instance
    *
@@ -40,10 +43,11 @@ public:
    */
   int run();
 
-private:
+ private:
   struct Vm* vm_;
   V4FrontContext* compiler_ctx_;
   uint8_t vm_memory_[16384];  // 16KB RAM for VM
+  MetaCommands meta_cmds_;
 
   // Track word definition buffers (must not be freed while VM is alive)
   V4FrontBuf* word_bufs_;
