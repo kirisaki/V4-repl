@@ -54,7 +54,17 @@ FetchContent_MakeAvailable(linenoise)
 add_library(linenoise_lib STATIC ${linenoise_SOURCE_DIR}/linenoise.c)
 target_include_directories(linenoise_lib PUBLIC ${linenoise_SOURCE_DIR})
 
-# Main executable
+# V4-REPL library (platform-independent C API)
+add_library(v4repl STATIC src/repl.c)
+
+target_include_directories(
+  v4repl
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_link_libraries(v4repl PUBLIC v4vm v4front)
+
+# Main executable (C++ REPL with linenoise)
 add_executable(v4-repl src/main.cpp src/repl.cpp src/meta_commands.cpp)
 
 target_include_directories(v4-repl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -67,4 +77,5 @@ if(WITH_FILESYSTEM)
 endif()
 
 # Installation
-install(TARGETS v4-repl DESTINATION bin)
+install(TARGETS v4-repl v4repl DESTINATION bin)
+install(DIRECTORY include/v4repl DESTINATION include)

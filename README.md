@@ -407,6 +407,48 @@ The compact size makes v4-repl ideal for:
 - Resource-constrained environments
 - Quick deployment without large dependencies
 
+## Platform-Independent Library (libv4repl)
+
+V4-REPL now provides a **platform-independent C API** that can be integrated into any platform, including embedded systems.
+
+### Library API
+
+The core REPL functionality is available as a C library (`libv4repl`) with a simple API:
+
+```c
+#include "v4repl/repl.h"
+
+// Create REPL context
+V4ReplConfig config = {
+    .vm = vm,
+    .front_ctx = compiler_ctx,
+    .line_buffer_size = 512,
+};
+V4ReplContext *repl = v4_repl_create(&config);
+
+// Process a line of input
+v4_err err = v4_repl_process_line(repl, "2 3 +");
+
+// Display stack
+v4_repl_print_stack(repl);  // Prints: " ok [1]: 5\n"
+
+// Cleanup
+v4_repl_destroy(repl);
+```
+
+### ESP32-C6 Example
+
+A complete ESP32-C6 REPL example is available in [`examples/esp32c6/`](examples/esp32c6/).
+
+Features:
+- UART-based interactive Forth REPL
+- ~23KB RAM usage (configurable)
+- Line editing with backspace support
+- Ctrl+C interrupt handling
+- Integration guide for V4-ports
+
+See [`examples/esp32c6/README.md`](examples/esp32c6/README.md) for build instructions and integration guide.
+
 ## Project Structure
 
 ```
@@ -416,15 +458,24 @@ V4-repl/
 ├── README.md               # This file
 ├── .clang-format           # Code formatting rules
 ├── .gitignore
+├── include/
+│   └── v4repl/
+│       └── repl.h          # Platform-independent REPL API
 ├── src/
-│   ├── main.cpp            # Entry point
-│   ├── repl.hpp            # REPL class interface
-│   ├── repl.cpp            # REPL implementation
+│   ├── repl.c              # REPL library implementation
+│   ├── main.cpp            # Linux REPL entry point
+│   ├── repl.hpp            # Linux REPL class interface
+│   ├── repl.cpp            # Linux REPL implementation
 │   ├── meta_commands.hpp   # Meta-commands interface
 │   └── meta_commands.cpp   # Meta-commands implementation
+├── examples/
+│   └── esp32c6/
+│       ├── main.c          # ESP32-C6 REPL example
+│       └── README.md       # ESP32-C6 integration guide
 ├── docs/
 │   ├── user-guide.md       # Complete user guide
-│   └── meta-commands.md    # Meta-commands reference
+│   ├── meta-commands.md    # Meta-commands reference
+│   └── recurse-implementation.md  # RECURSE implementation
 ├── test_smoke.sh           # Smoke test script
 ├── size_report.sh          # Binary size analysis script
 └── build/                  # Build directory (generated)
