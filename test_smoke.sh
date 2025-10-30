@@ -3,9 +3,27 @@
 
 set -e
 
-REPL="./build/v4-repl"
+# Auto-detect REPL executable path (Unix vs Windows)
+if [ -f "./build/v4-repl" ]; then
+    REPL="./build/v4-repl"
+elif [ -f "./build/Debug/v4-repl.exe" ]; then
+    REPL="./build/Debug/v4-repl.exe"
+elif [ -f "./build/Release/v4-repl.exe" ]; then
+    REPL="./build/Release/v4-repl.exe"
+elif [ -f "./build/v4-repl.exe" ]; then
+    REPL="./build/v4-repl.exe"
+else
+    echo "❌ Error: v4-repl executable not found"
+    echo "   Searched in:"
+    echo "     ./build/v4-repl"
+    echo "     ./build/Debug/v4-repl.exe"
+    echo "     ./build/Release/v4-repl.exe"
+    echo "     ./build/v4-repl.exe"
+    exit 1
+fi
 
 echo "🧪 Running smoke tests..."
+echo "   Using: $REPL"
 
 # Test 1: Basic arithmetic
 echo "  Test 1: Basic arithmetic (1 + 2)..."
