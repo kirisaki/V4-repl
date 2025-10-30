@@ -52,6 +52,9 @@ static void sigint_handler(int sig) {
   ssize_t written = write(STDERR_FILENO, msg, sizeof(msg) - 1);
   (void) written;  // Suppress unused warning
 }
+#else
+// Windows: Dummy interrupt flag (Ctrl+C not implemented)
+static volatile int g_interrupted = 0;
 #endif
 
 #ifdef _WIN32
