@@ -47,11 +47,12 @@ Repl::Repl()
   memset(vm_memory_, 0, sizeof(vm_memory_));
 
   // Create VM configuration
-  VmConfig cfg;
+  VmConfig cfg = {0};  // Zero-initialize to avoid uninitialized fields
   cfg.mem = vm_memory_;
   cfg.mem_size = sizeof(vm_memory_);
   cfg.mmio = nullptr;
   cfg.mmio_count = 0;
+  cfg.arena = nullptr;  // Explicitly set arena to NULL (use malloc for word names)
 
   // Create VM instance
   vm_ = vm_create(&cfg);
