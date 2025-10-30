@@ -1,4 +1,4 @@
-.PHONY: all build build-fetch build-no-fs release run test clean format format-check size size-report help
+.PHONY: all build build-fetch build-no-fs release run test test-unit test-all clean format format-check size size-report help
 
 # Default paths for local V4 and V4-front
 V4_PATH ?= ../V4
@@ -65,6 +65,18 @@ run-release: release
 # Run basic smoke tests
 test: build
 	@bash test_smoke.sh
+
+# Run unit tests (libv4repl)
+test-unit: build
+	@echo "🧪 Running libv4repl unit tests..."
+	@./build/test_libv4repl
+
+# Run all tests (smoke + unit)
+test-all: build
+	@echo "🧪 Running all tests..."
+	@bash test_smoke.sh
+	@echo ""
+	@./build/test_libv4repl
 
 # Show binary size
 size:
@@ -163,6 +175,8 @@ help:
 	@echo "  make run             - Build and run the REPL interactively"
 	@echo "  make run-release     - Run release build"
 	@echo "  make test            - Run smoke tests"
+	@echo "  make test-unit       - Run libv4repl unit tests"
+	@echo "  make test-all        - Run all tests (smoke + unit)"
 	@echo "  make size            - Show binary size (quick check)"
 	@echo "  make size-report     - Detailed size analysis with recommendations"
 	@echo "  make clean           - Remove build directories"
