@@ -513,7 +513,7 @@ int Repl::eval_line(const char* line) {
 }
 
 int Repl::run() {
-  printf("V4 REPL v0.2.0\n");
+  printf("V4 REPL v0.4.0\n");
 #ifdef _WIN32
   printf("Type 'bye' or press Ctrl+Z to exit\n");
 #else

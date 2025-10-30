@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Version: 0.1.0 */
-#define V4_REPL_VERSION 0x000100
+/* Version: 0.4.0 */
+#define V4_REPL_VERSION 0x000400
 
 /* Default configuration */
 #define DEFAULT_LINE_BUFFER_SIZE 512
