@@ -1,24 +1,45 @@
 #include "repl.hpp"
 
+#ifndef _WIN32
 #include <signal.h>
 #include <unistd.h>
+#endif
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
+#ifndef _WIN32
+// Unix: use linenoise for line editing
 extern "C" {
 #include "linenoise.h"
 }
+#else
+// Windows: use simple line input with std::string
+#include <iostream>
+#include <string>
+#include <vector>
+#endif
 
 #ifdef WITH_FILESYSTEM
+#ifdef _WIN32
+#include <direct.h>  // for _mkdir
+#include <io.h>      // for _access
+#define ACCESS _access
+#define MKDIR(path) _mkdir(path)
+#else
 #include <sys/stat.h>
+#include <unistd.h>
+#define ACCESS access
+#define MKDIR(path) mkdir(path, 0755)
+#endif
 #endif
 
 static const char* PROMPT = "v4> ";
 static const int MAX_HISTORY = 1000;
 
-// Global interrupt flag for Ctrl+C handling
+#ifndef _WIN32
+// Unix: Global interrupt flag for Ctrl+C handling
 static volatile sig_atomic_t g_interrupted = 0;
 
 // Signal handler for Ctrl+C
@@ -31,6 +52,69 @@ static void sigint_handler(int sig) {
   ssize_t written = write(STDERR_FILENO, msg, sizeof(msg) - 1);
   (void) written;  // Suppress unused warning
 }
+#endif
+
+#ifdef _WIN32
+// Windows: Simple line history vector
+static std::vector<std::string> g_history;
+static size_t g_history_index = 0;
+
+static void add_history(const std::string& line) {
+  if (!line.empty() && (g_history.empty() || g_history.back() != line)) {
+    g_history.push_back(line);
+    if (g_history.size() > MAX_HISTORY) {
+      g_history.erase(g_history.begin());
+    }
+  }
+  g_history_index = g_history.size();
+}
+
+static void load_history(const char* path) {
+  FILE* f = fopen(path, "r");
+  if (!f)
+    return;
+
+  char line[1024];
+  while (fgets(line, sizeof(line), f)) {
+    // Remove trailing newline
+    size_t len = strlen(line);
+    if (len > 0 && line[len - 1] == '\n')
+      line[len - 1] = '\0';
+    if (line[0])
+      g_history.push_back(line);
+  }
+  fclose(f);
+  g_history_index = g_history.size();
+}
+
+static void save_history(const char* path) {
+  FILE* f = fopen(path, "w");
+  if (!f)
+    return;
+
+  for (const auto& line : g_history) {
+    fprintf(f, "%s\n", line.c_str());
+  }
+  fclose(f);
+}
+
+// Simple line reading for Windows
+static char* read_line_simple(const char* prompt) {
+  printf("%s", prompt);
+  fflush(stdout);
+
+  std::string line;
+  if (!std::getline(std::cin, line)) {
+    return nullptr;  // EOF (Ctrl+Z on Windows)
+  }
+
+  char* result = (char*) malloc(line.length() + 1);
+  if (result) {
+    strcpy(result, line.c_str());
+  }
+  return result;
+}
+#endif
 
 Repl::Repl()
     : vm_(nullptr),
@@ -72,12 +156,14 @@ Repl::Repl()
   // Initialize meta-commands handler
   meta_cmds_ = MetaCommands(vm_, compiler_ctx_);
 
-  // Set up Ctrl+C signal handler
+#ifndef _WIN32
+  // Set up Ctrl+C signal handler (Unix only)
   struct sigaction sa;
   sa.sa_handler = sigint_handler;
   sigemptyset(&sa.sa_mask);
   sa.sa_flags = 0;
   sigaction(SIGINT, &sa, nullptr);
+#endif
 
 #ifdef WITH_FILESYSTEM
   init_history();
@@ -111,24 +197,37 @@ Repl::~Repl() {
 
 #ifdef WITH_FILESYSTEM
 void Repl::init_history() {
-  // Get home directory
+#ifdef _WIN32
+  // Windows: Get home directory from USERPROFILE
+  const char* home = getenv("USERPROFILE");
+  if (!home) {
+    home = ".";
+  }
+  // Construct history file path
+  snprintf(history_path_, sizeof(history_path_), "%s\\.v4_history", home);
+  // Load existing history
+  ::load_history(history_path_);
+#else
+  // Unix: Get home directory from HOME
   const char* home = getenv("HOME");
   if (!home) {
     home = ".";
   }
-
   // Construct history file path
   snprintf(history_path_, sizeof(history_path_), "%s/.v4_history", home);
-
   // Set max history
   linenoiseHistorySetMaxLen(MAX_HISTORY);
-
   // Load existing history
   linenoiseHistoryLoad(history_path_);
+#endif
 }
 
 void Repl::save_history() {
+#ifdef _WIN32
+  ::save_history(history_path_);
+#else
   linenoiseHistorySave(history_path_);
+#endif
 }
 #endif
 
@@ -412,12 +511,17 @@ int Repl::eval_line(const char* line) {
 
 int Repl::run() {
   printf("V4 REPL v0.2.0\n");
+#ifdef _WIN32
+  printf("Type 'bye' or press Ctrl+Z to exit\n");
+#else
   printf("Type 'bye' or press Ctrl+D to exit\n");
+#endif
   printf("Type '.help' for help\n");
   printf("Type '<<<' to enter PASTE mode\n\n");
 
   while (true) {
-    // Clear interrupt flag before reading input
+#ifndef _WIN32
+    // Clear interrupt flag before reading input (Unix only)
     g_interrupted = 0;
 
     char* line = linenoise(get_prompt());
@@ -440,6 +544,16 @@ int Repl::run() {
       g_interrupted = 0;
       continue;
     }
+#else
+    // Windows: Simple line reading
+    char* line = read_line_simple(get_prompt());
+
+    // EOF (Ctrl+Z) pressed
+    if (!line) {
+      printf("\nGoodbye!\n");
+      break;
+    }
+#endif
 
     // Evaluate the line
     int result = eval_line(line);
@@ -447,7 +561,11 @@ int Repl::run() {
     if (result == 1) {
       // User requested exit
       printf("Goodbye!\n");
+#ifndef _WIN32
       linenoiseFree(line);
+#else
+      free(line);
+#endif
       break;
     } else if (result == 0) {
       // Success - print stack
@@ -456,13 +574,21 @@ int Repl::run() {
 #ifdef WITH_FILESYSTEM
       // Add to history if not empty
       if (line[0] != '\0') {
+#ifndef _WIN32
         linenoiseHistoryAdd(line);
+#else
+        ::add_history(line);
+#endif
       }
 #endif
     }
     // result == -1 means error, already printed
 
+#ifndef _WIN32
     linenoiseFree(line);
+#else
+    free(line);
+#endif
   }
 
   return 0;

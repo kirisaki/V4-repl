@@ -73,22 +73,24 @@ target_include_directories(
 
 target_link_libraries(v4repl PUBLIC v4vm v4front)
 
-# Main executable (C++ REPL with linenoise - Unix only)
+# Main executable (C++ REPL - cross-platform)
+add_executable(v4-repl src/main.cpp src/repl.cpp src/meta_commands.cpp)
+
+target_include_directories(v4-repl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 if(UNIX)
-  add_executable(v4-repl src/main.cpp src/repl.cpp src/meta_commands.cpp)
-
-  target_include_directories(v4-repl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
+  # Unix: link with linenoise for fancy line editing
   target_link_libraries(v4-repl PRIVATE v4vm v4front linenoise_lib mock_hal)
-
-  # Conditional compilation for filesystem support
-  if(WITH_FILESYSTEM)
-    target_compile_definitions(v4-repl PRIVATE WITH_FILESYSTEM=1)
-  endif()
-
-  message(STATUS "Building v4-repl executable (Unix only)")
+  message(STATUS "Building v4-repl executable (Unix with linenoise)")
 else()
-  message(STATUS "Skipping v4-repl executable (requires Unix/linenoise)")
+  # Windows: no linenoise, use simple std::getline
+  target_link_libraries(v4-repl PRIVATE v4vm v4front mock_hal)
+  message(STATUS "Building v4-repl executable (Windows with simple input)")
+endif()
+
+# Conditional compilation for filesystem support
+if(WITH_FILESYSTEM)
+  target_compile_definitions(v4-repl PRIVATE WITH_FILESYSTEM=1)
 endif()
 
 # libv4repl tests (using doctest)
@@ -99,9 +101,5 @@ target_include_directories(test_libv4repl
                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Installation
-if(UNIX)
-  install(TARGETS v4-repl v4repl DESTINATION bin)
-else()
-  install(TARGETS v4repl DESTINATION bin)
-endif()
+install(TARGETS v4-repl v4repl DESTINATION bin)
 install(DIRECTORY include/v4repl DESTINATION include)
