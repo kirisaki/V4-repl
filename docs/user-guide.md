@@ -491,6 +491,192 @@ v4> 3 4 SUM-OF-SQUARES
  ok [1]: 25
 ```
 
+### Example 4: Recursive Factorial (V4-front v0.3.x)
+
+```forth
+v4> : FACTORIAL DUP 1 > IF DUP 1 - RECURSE * THEN ;
+ ok
+
+v4> 5 FACTORIAL
+ ok [1]: 120
+
+v4> 10 FACTORIAL
+ ok [1]: 3628800
+```
+
+### Example 5: Fibonacci with RECURSE (V4-front v0.3.x)
+
+```forth
+v4> : FIB DUP 2 < IF DROP 1 ELSE DUP 1 - RECURSE SWAP 2 - RECURSE + THEN ;
+ ok
+
+v4> 7 FIB
+ ok [1]: 21
+
+v4> 10 FIB
+ ok [1]: 89
+```
+
+## Advanced Language Features (V4-front v0.3.x)
+
+V4-front v0.3.0 and v0.3.1 introduce powerful new language features.
+
+### Recursion with RECURSE
+
+The `RECURSE` keyword allows a word to call itself recursively:
+
+```forth
+v4> : COUNTDOWN DUP 0 > IF DUP . 1 - RECURSE THEN ;
+ ok
+
+v4> 5 COUNTDOWN
+```
+
+**Benefits:**
+- Natural expression of recursive algorithms
+- Automatically references the current word being defined
+- Works with multiple RECURSE calls in the same word
+
+### Extended Arithmetic
+
+#### Increment and Decrement
+```forth
+v4> 5 1+    ( Increment )
+ ok [1]: 6
+
+v4> 5 1-    ( Decrement )
+ ok [1]: 4
+```
+
+#### Unsigned Arithmetic
+```forth
+v4> 17 5 U/     ( Unsigned division )
+ ok [1]: 3
+
+v4> 17 5 UMOD   ( Unsigned modulo )
+ ok [1]: 2
+```
+
+### Bitwise Operations
+
+```forth
+v4> 1 3 LSHIFT   ( Logical left shift: 1 << 3 )
+ ok [1]: 8
+
+v4> 8 2 RSHIFT   ( Logical right shift: 8 >> 2 )
+ ok [1]: 2
+
+v4> -8 2 ARSHIFT ( Arithmetic right shift: preserves sign )
+ ok [1]: -2
+```
+
+### Enhanced Stack Manipulation
+
+#### Single-Cell Operations
+```forth
+v4> 1 2 3 ROT    ( Rotate: a b c -- b c a )
+ ok [3]: 2 3 1
+
+v4> 1 2 NIP      ( Remove second: a b -- b )
+ ok [1]: 2
+
+v4> 1 2 TUCK     ( Insert copy: a b -- b a b )
+ ok [3]: 2 1 2
+```
+
+#### Double-Cell Operations
+```forth
+v4> 1 2 2DUP     ( Duplicate top two )
+ ok [4]: 1 2 1 2
+
+v4> 1 2 3 4 2DROP ( Drop top two )
+ ok [2]: 1 2
+
+v4> 1 2 3 4 2SWAP ( Swap top two pairs )
+ ok [4]: 3 4 1 2
+
+v4> 1 2 3 4 2OVER ( Copy second pair over )
+ ok [6]: 1 2 3 4 1 2
+```
+
+### Arithmetic Utilities
+
+```forth
+v4> 5 NEGATE     ( Sign negation )
+ ok [1]: -5
+
+v4> -7 ABS       ( Absolute value )
+ ok [1]: 7
+
+v4> 3 7 MIN      ( Minimum )
+ ok [1]: 3
+
+v4> 3 7 MAX      ( Maximum )
+ ok [1]: 7
+
+v4> 5 ?DUP       ( Duplicate if non-zero )
+ ok [2]: 5 5
+
+v4> 0 ?DUP       ( Leave zero alone )
+ ok [1]: 0
+```
+
+### Comparison Operations
+
+#### Zero Comparison
+```forth
+v4> 0 0=         ( Test if zero )
+ ok [1]: -1
+
+v4> -5 0<        ( Test if less than zero )
+ ok [1]: -1
+
+v4> 5 0>         ( Test if greater than zero )
+ ok [1]: -1
+```
+
+#### Unsigned Comparison
+```forth
+v4> 5 10 U<      ( Unsigned less than )
+ ok [1]: -1
+
+v4> 10 10 U<=    ( Unsigned less than or equal )
+ ok [1]: -1
+```
+
+### Boolean Constants
+
+```forth
+v4> TRUE         ( Boolean true: -1 )
+ ok [1]: -1
+
+v4> FALSE        ( Boolean false: 0 )
+ ok [1]: 0
+
+v4> 5 5 = TRUE = ( Compare result with TRUE )
+ ok [1]: -1
+```
+
+### Memory Access
+
+#### Byte Operations
+```forth
+v4> ( Store and fetch bytes )
+v4> variable BYTE-VAR
+v4> 255 BYTE-VAR C!  ( Store byte )
+v4> BYTE-VAR C@      ( Fetch byte )
+ ok [1]: 255
+```
+
+#### Halfword Operations
+```forth
+v4> ( Store and fetch 16-bit values )
+v4> variable HALF-VAR
+v4> 65535 HALF-VAR W!  ( Store halfword )
+v4> HALF-VAR W@        ( Fetch halfword )
+ ok [1]: 65535
+```
+
 ## Troubleshooting
 
 ### "unknown token" Error

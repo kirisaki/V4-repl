@@ -19,6 +19,16 @@ Interactive Forth REPL for the V4 virtual machine.
 - **⚡ Ctrl+C interrupt handling** - Safely interrupt long-running operations without crashing the REPL
 - **📚 Comprehensive documentation** - User guide and meta-commands reference
 
+### Supported Forth Language Features (V4-front v0.3.x)
+- **🔢 Extended arithmetic** - `1+`, `1-`, `U/`, `UMOD` (unsigned operations)
+- **🔀 Bitwise operations** - `LSHIFT`, `RSHIFT`, `ARSHIFT` (shift operations)
+- **📊 Comparison operations** - `U<`, `U<=` (unsigned), `0=`, `0<`, `0>` (zero comparison)
+- **📚 Stack manipulation** - `ROT`, `NIP`, `TUCK`, `2DUP`, `2DROP`, `2SWAP`, `2OVER`
+- **🧮 Arithmetic utilities** - `NEGATE`, `ABS`, `MIN`, `MAX`, `?DUP`
+- **🎯 Boolean constants** - `TRUE` (-1), `FALSE` (0)
+- **🔁 Recursion** - `RECURSE` keyword for recursive word definitions
+- **💾 Memory access** - `C@`, `C!` (byte), `W@`, `W!` (halfword)
+
 ## Requirements
 
 - C++17 compiler
@@ -200,6 +210,94 @@ Execution interrupted
  ok
 
 v4> ( REPL continues normally )
+```
+
+### New Language Features (V4-front v0.3.x)
+
+#### Recursion with RECURSE
+
+```forth
+v4> : FACTORIAL DUP 1 > IF DUP 1 - RECURSE * THEN ;
+ ok
+
+v4> 5 FACTORIAL
+ ok [1]: 120
+
+v4> : FIB DUP 2 < IF DROP 1 ELSE DUP 1 - RECURSE SWAP 2 - RECURSE + THEN ;
+ ok
+
+v4> 7 FIB
+ ok [1]: 21
+```
+
+#### Extended Arithmetic and Bitwise Operations
+
+```forth
+v4> 10 1+
+ ok [1]: 11
+
+v4> 10 1-
+ ok [1]: 9
+
+v4> 17 5 U/
+ ok [1]: 3
+
+v4> 1 3 LSHIFT
+ ok [1]: 8
+
+v4> 8 2 RSHIFT
+ ok [1]: 2
+```
+
+#### Stack Manipulation
+
+```forth
+v4> 1 2 3 ROT
+ ok [3]: 2 3 1
+
+v4> 1 2 NIP
+ ok [1]: 2
+
+v4> 1 2 TUCK
+ ok [3]: 2 1 2
+
+v4> 1 2 2DUP
+ ok [4]: 1 2 1 2
+```
+
+#### Arithmetic Utilities
+
+```forth
+v4> -5 ABS
+ ok [1]: 5
+
+v4> 3 7 MIN
+ ok [1]: 3
+
+v4> 3 7 MAX
+ ok [1]: 7
+
+v4> 5 ?DUP
+ ok [2]: 5 5
+
+v4> 0 ?DUP
+ ok [1]: 0
+```
+
+#### Comparison and Boolean Operations
+
+```forth
+v4> 0 0=
+ ok [1]: -1
+
+v4> -5 0<
+ ok [1]: -1
+
+v4> TRUE
+ ok [1]: -1
+
+v4> FALSE
+ ok [1]: 0
 ```
 
 ## Stack Display Format
@@ -390,10 +488,12 @@ v4-repl is designed to be compact and suitable for embedded systems:
 
 | Build Type | Size | Use Case |
 |------------|------|----------|
-| Debug | 143KB | Development (includes debug symbols) |
-| Debug (stripped) | 59KB | Testing without debugger |
-| Release (stripped) | **67KB** | **Production (recommended)** |
-| MinSizeRel (stripped) | ~60KB | Size-critical embedded systems |
+| Debug | 224KB | Development (includes debug symbols) |
+| Debug (stripped) | 91KB | Testing without debugger |
+| Release (stripped) | **91KB** | **Production (recommended)** |
+| MinSizeRel (stripped) | ~85KB | Size-critical embedded systems |
+
+**Note**: Size increased from previous 67KB due to V4/V4-front feature additions (31 new opcodes, RECURSE, composite words, etc.). The binary remains compact and suitable for embedded systems.
 
 Check binary size:
 ```bash
@@ -409,7 +509,7 @@ The compact size makes v4-repl ideal for:
 
 ## Platform-Independent Library (libv4repl)
 
-V4-REPL now provides a **platform-independent C API** that can be integrated into any platform, including embedded systems.
+V4-REPL provides a **platform-independent C API** that can be integrated into any platform, including embedded systems.
 
 ### Library API
 
@@ -436,18 +536,20 @@ v4_repl_print_stack(repl);  // Prints: " ok [1]: 5\n"
 v4_repl_destroy(repl);
 ```
 
-### ESP32-C6 Example
+### Embedded Systems Integration
 
-A complete ESP32-C6 REPL example is available in [`examples/esp32c6/`](examples/esp32c6/).
+For embedded platform implementations, see [V4-ports](https://github.com/kirisaki/V4-ports):
 
-Features:
+- **ESP32-C6 REPL Demo** - Complete working example with USB Serial/JTAG and GPIO LED control
+- **Platform-specific HAL** - Hardware abstraction layer implementations
+- **Build instructions** - Integration guides for various MCU platforms
+
+The ESP32-C6 example demonstrates:
 - UART-based interactive Forth REPL
 - ~23KB RAM usage (configurable)
 - Line editing with backspace support
 - Ctrl+C interrupt handling
-- Integration guide for V4-ports
-
-See [`examples/esp32c6/README.md`](examples/esp32c6/README.md) for build instructions and integration guide.
+- GPIO control integration
 
 ## Project Structure
 
