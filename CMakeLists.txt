@@ -50,6 +50,13 @@ FetchContent_Declare(
   GIT_TAG master)
 FetchContent_MakeAvailable(linenoise)
 
+# doctest (for libv4repl tests)
+FetchContent_Declare(
+  doctest
+  GIT_REPOSITORY https://github.com/doctest/doctest.git
+  GIT_TAG master)
+FetchContent_MakeAvailable(doctest)
+
 # linenoise is a C library, create a wrapper target
 add_library(linenoise_lib STATIC ${linenoise_SOURCE_DIR}/linenoise.c)
 target_include_directories(linenoise_lib PUBLIC ${linenoise_SOURCE_DIR})
@@ -75,6 +82,13 @@ target_link_libraries(v4-repl PRIVATE v4vm v4front linenoise_lib mock_hal)
 if(WITH_FILESYSTEM)
   target_compile_definitions(v4-repl PRIVATE WITH_FILESYSTEM=1)
 endif()
+
+# libv4repl tests (using doctest)
+add_executable(test_libv4repl tests/test_libv4repl.cpp)
+target_link_libraries(test_libv4repl PRIVATE v4repl v4vm doctest::doctest
+                                             mock_hal)
+target_include_directories(test_libv4repl
+                           PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Installation
 install(TARGETS v4-repl v4repl DESTINATION bin)
