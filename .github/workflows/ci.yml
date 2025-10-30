@@ -69,14 +69,9 @@ jobs:
           -DWITH_FILESYSTEM=ON
         cmake --build build -j
 
-    - name: Run smoke tests (Unix)
+    - name: Run smoke tests (Unix only)
       if: runner.os != 'Windows'
       run: make test
-
-    - name: Run smoke tests (Windows)
-      if: runner.os == 'Windows'
-      shell: bash
-      run: bash test_smoke.sh
 
     - name: Run unit tests (Unix)
       if: runner.os != 'Windows'
@@ -86,3 +81,7 @@ jobs:
       if: runner.os == 'Windows'
       shell: bash
       run: ./build/Debug/test_libv4repl.exe || ./build/test_libv4repl.exe
+
+    - name: Note about Windows
+      if: runner.os == 'Windows'
+      run: echo "Note - v4-repl executable requires Unix/linenoise (not available on Windows). Only libv4repl library and tests are built."

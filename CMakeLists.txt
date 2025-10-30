@@ -43,13 +43,6 @@ else()
   FetchContent_MakeAvailable(v4front)
 endif()
 
-# linenoise
-FetchContent_Declare(
-  linenoise
-  GIT_REPOSITORY https://github.com/antirez/linenoise.git
-  GIT_TAG master)
-FetchContent_MakeAvailable(linenoise)
-
 # doctest (for libv4repl tests)
 FetchContent_Declare(
   doctest
@@ -57,9 +50,18 @@ FetchContent_Declare(
   GIT_TAG master)
 FetchContent_MakeAvailable(doctest)
 
-# linenoise is a C library, create a wrapper target
-add_library(linenoise_lib STATIC ${linenoise_SOURCE_DIR}/linenoise.c)
-target_include_directories(linenoise_lib PUBLIC ${linenoise_SOURCE_DIR})
+# linenoise (Unix only - requires termios.h)
+if(UNIX)
+  FetchContent_Declare(
+    linenoise
+    GIT_REPOSITORY https://github.com/antirez/linenoise.git
+    GIT_TAG master)
+  FetchContent_MakeAvailable(linenoise)
+
+  # linenoise is a C library, create a wrapper target
+  add_library(linenoise_lib STATIC ${linenoise_SOURCE_DIR}/linenoise.c)
+  target_include_directories(linenoise_lib PUBLIC ${linenoise_SOURCE_DIR})
+endif()
 
 # V4-REPL library (platform-independent C API)
 add_library(v4repl STATIC src/repl.c)
@@ -71,16 +73,22 @@ target_include_directories(
 
 target_link_libraries(v4repl PUBLIC v4vm v4front)
 
-# Main executable (C++ REPL with linenoise)
-add_executable(v4-repl src/main.cpp src/repl.cpp src/meta_commands.cpp)
+# Main executable (C++ REPL with linenoise - Unix only)
+if(UNIX)
+  add_executable(v4-repl src/main.cpp src/repl.cpp src/meta_commands.cpp)
 
-target_include_directories(v4-repl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_include_directories(v4-repl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(v4-repl PRIVATE v4vm v4front linenoise_lib mock_hal)
+  target_link_libraries(v4-repl PRIVATE v4vm v4front linenoise_lib mock_hal)
 
-# Conditional compilation for filesystem support
-if(WITH_FILESYSTEM)
-  target_compile_definitions(v4-repl PRIVATE WITH_FILESYSTEM=1)
+  # Conditional compilation for filesystem support
+  if(WITH_FILESYSTEM)
+    target_compile_definitions(v4-repl PRIVATE WITH_FILESYSTEM=1)
+  endif()
+
+  message(STATUS "Building v4-repl executable (Unix only)")
+else()
+  message(STATUS "Skipping v4-repl executable (requires Unix/linenoise)")
 endif()
 
 # libv4repl tests (using doctest)
@@ -91,5 +99,9 @@ target_include_directories(test_libv4repl
                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Installation
-install(TARGETS v4-repl v4repl DESTINATION bin)
+if(UNIX)
+  install(TARGETS v4-repl v4repl DESTINATION bin)
+else()
+  install(TARGETS v4repl DESTINATION bin)
+endif()
 install(DIRECTORY include/v4repl DESTINATION include)

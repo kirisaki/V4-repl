@@ -39,13 +39,12 @@ protected:
         v4_arena_init(&arena, arena_buffer, ARENA_SIZE);
 
         // Create VM
-        VmConfig vm_config = {
-            .mem = vm_memory,
-            .mem_size = VM_MEMORY_SIZE,
-            .mmio = nullptr,
-            .mmio_count = 0,
-            .arena = &arena,
-        };
+        VmConfig vm_config;
+        vm_config.mem = vm_memory;
+        vm_config.mem_size = VM_MEMORY_SIZE;
+        vm_config.mmio = nullptr;
+        vm_config.mmio_count = 0;
+        vm_config.arena = &arena;
         vm = vm_create(&vm_config);
         REQUIRE(vm != nullptr);
 
@@ -54,11 +53,10 @@ protected:
         REQUIRE(compiler_ctx != nullptr);
 
         // Create REPL context
-        V4ReplConfig repl_config = {
-            .vm = vm,
-            .front_ctx = compiler_ctx,
-            .line_buffer_size = 512,
-        };
+        V4ReplConfig repl_config;
+        repl_config.vm = vm;
+        repl_config.front_ctx = compiler_ctx;
+        repl_config.line_buffer_size = 512;
         repl = v4_repl_create(&repl_config);
         REQUIRE(repl != nullptr);
     }
