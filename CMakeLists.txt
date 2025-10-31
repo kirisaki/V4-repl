@@ -40,7 +40,7 @@ else()
       CACHE BOOL "Fetch V4 from Git" FORCE)
   FetchContent_Declare(
     v4front
-    GIT_REPOSITORY https://github.com/kirisaki/V4-front.git
+    GIT_REPOSITORY https://github.com/V4-project/V4-front.git
     GIT_TAG main)
   FetchContent_MakeAvailable(v4front)
 endif()
