@@ -3,6 +3,7 @@
 # Default paths for local V4 and V4-front
 V4_PATH ?= ../V4
 V4FRONT_PATH ?= ../V4-front
+V4_USE_V4HAL ?= OFF
 
 # Default target
 all: build
@@ -13,6 +14,7 @@ build:
 	@cmake -B build -DCMAKE_BUILD_TYPE=Debug \
 		-DV4_LOCAL_PATH=$(V4_PATH) \
 		-DV4FRONT_LOCAL_PATH=$(V4FRONT_PATH) \
+		-DV4_USE_V4HAL=$(V4_USE_V4HAL) \
 		-DWITH_FILESYSTEM=ON
 	@cmake --build build -j
 
@@ -22,6 +24,7 @@ build-no-fs:
 	@cmake -B build -DCMAKE_BUILD_TYPE=Debug \
 		-DV4_LOCAL_PATH=$(V4_PATH) \
 		-DV4FRONT_LOCAL_PATH=$(V4FRONT_PATH) \
+		-DV4_USE_V4HAL=$(V4_USE_V4HAL) \
 		-DWITH_FILESYSTEM=OFF
 	@cmake --build build -j
 
@@ -31,6 +34,7 @@ build-fetch:
 	@cmake -B build -DCMAKE_BUILD_TYPE=Debug \
 		-DV4_LOCAL_PATH="" \
 		-DV4FRONT_LOCAL_PATH="" \
+		-DV4_USE_V4HAL=$(V4_USE_V4HAL) \
 		-DWITH_FILESYSTEM=ON
 	@cmake --build build -j
 
@@ -40,6 +44,7 @@ release:
 	@cmake -B build-release -DCMAKE_BUILD_TYPE=Release \
 		-DV4_LOCAL_PATH=$(V4_PATH) \
 		-DV4FRONT_LOCAL_PATH=$(V4FRONT_PATH) \
+		-DV4_USE_V4HAL=$(V4_USE_V4HAL) \
 		-DWITH_FILESYSTEM=ON
 	@cmake --build build-release -j
 
@@ -49,6 +54,7 @@ release-no-fs:
 	@cmake -B build-release -DCMAKE_BUILD_TYPE=Release \
 		-DV4_LOCAL_PATH=$(V4_PATH) \
 		-DV4FRONT_LOCAL_PATH=$(V4FRONT_PATH) \
+		-DV4_USE_V4HAL=$(V4_USE_V4HAL) \
 		-DWITH_FILESYSTEM=OFF
 	@cmake --build build-release -j
 
@@ -143,6 +149,7 @@ asan:
 	@cmake -B build-asan -DCMAKE_BUILD_TYPE=Debug \
 		-DV4_LOCAL_PATH=$(V4_PATH) \
 		-DV4FRONT_LOCAL_PATH=$(V4FRONT_PATH) \
+		-DV4_USE_V4HAL=$(V4_USE_V4HAL) \
 		-DWITH_FILESYSTEM=ON \
 		-DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -g"
 	@cmake --build build-asan -j
@@ -155,6 +162,7 @@ ubsan:
 	@cmake -B build-ubsan -DCMAKE_BUILD_TYPE=Debug \
 		-DV4_LOCAL_PATH=$(V4_PATH) \
 		-DV4FRONT_LOCAL_PATH=$(V4FRONT_PATH) \
+		-DV4_USE_V4HAL=$(V4_USE_V4HAL) \
 		-DWITH_FILESYSTEM=ON \
 		-DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer -g"
 	@cmake --build build-ubsan -j
@@ -189,6 +197,7 @@ help:
 	@echo "Variables:"
 	@echo "  V4_PATH              - Path to V4 source (default: ../V4)"
 	@echo "  V4FRONT_PATH         - Path to V4-front source (default: ../V4-front)"
+	@echo "  V4_USE_V4HAL         - Use V4-hal C++17 CRTP HAL (default: OFF)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make                                    # Build with local dependencies"
@@ -197,5 +206,6 @@ help:
 	@echo "  make size                               # Check binary size"
 	@echo "  make size-report                        # Detailed size analysis"
 	@echo "  make build V4_PATH=/path/to/V4          # Use custom V4 path"
+	@echo "  make build V4_USE_V4HAL=ON              # Build with V4-hal"
 	@echo "  make build-no-fs                        # Build for embedded (no filesystem)"
 	@echo "  make release                            # Optimized release build"

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- V4-hal C++17 CRTP HAL implementation support
+  - Optional V4-hal integration via `V4_USE_V4HAL` option (default: OFF)
+  - Automatic HAL library selection (v4_hal_wrapper or mock_hal)
+  - Zero-cost abstraction benefits from C++17 CRTP architecture
+  - Platform support: POSIX, ESP32, CH32V203
+  - All 11 tests pass with V4-hal enabled
+
 ## [0.4.0] - 2025-10-31
 
 ### Added

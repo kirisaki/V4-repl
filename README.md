@@ -72,6 +72,27 @@ cmake -DWITH_FILESYSTEM=OFF ..
 make
 ```
 
+### Building with V4-hal (C++17 CRTP HAL)
+
+V4-repl can optionally use [V4-hal](https://github.com/kirisaki/V4-hal) for zero-cost hardware abstraction:
+
+```bash
+# Using Makefile
+make build V4_USE_V4HAL=ON
+
+# Or using CMake
+mkdir build
+cd build
+cmake -DV4_USE_V4HAL=ON ..
+make
+```
+
+Benefits:
+- C++17 CRTP for zero-cost abstraction
+- Platform support: POSIX, ESP32, CH32V203
+- Minimal runtime footprint (~5.7KB for GPIO+Timer)
+- Backward compatible with mock HAL
+
 ### Custom V4/V4-front paths
 
 By default, the build system looks for V4 and V4-front in `../V4` and `../V4-front`.

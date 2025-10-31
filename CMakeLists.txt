@@ -10,6 +10,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Options
 option(WITH_FILESYSTEM "Enable filesystem support (history file)" ON)
+option(V4_USE_V4HAL "Use V4-hal C++17 CRTP HAL implementation" OFF)
+
 set(V4_LOCAL_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/../V4"
     CACHE PATH "Path to local V4 source")
@@ -78,13 +80,23 @@ add_executable(v4-repl src/main.cpp src/repl.cpp src/meta_commands.cpp)
 
 target_include_directories(v4-repl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# Select HAL implementation
+if(V4_USE_V4HAL)
+  set(HAL_LIBRARY v4_hal_wrapper)
+  message(STATUS "Using V4-hal C++17 CRTP implementation")
+else()
+  set(HAL_LIBRARY mock_hal)
+  message(STATUS "Using mock HAL implementation")
+endif()
+
 if(UNIX)
   # Unix: link with linenoise for fancy line editing
-  target_link_libraries(v4-repl PRIVATE v4vm v4front linenoise_lib mock_hal)
+  target_link_libraries(v4-repl PRIVATE v4vm v4front linenoise_lib
+                                        ${HAL_LIBRARY})
   message(STATUS "Building v4-repl executable (Unix with linenoise)")
 else()
   # Windows: no linenoise, use simple std::getline
-  target_link_libraries(v4-repl PRIVATE v4vm v4front mock_hal)
+  target_link_libraries(v4-repl PRIVATE v4vm v4front ${HAL_LIBRARY})
   message(STATUS "Building v4-repl executable (Windows with simple input)")
 endif()
 
@@ -96,7 +108,7 @@ endif()
 # libv4repl tests (using doctest)
 add_executable(test_libv4repl tests/test_libv4repl.cpp)
 target_link_libraries(test_libv4repl PRIVATE v4repl v4vm doctest::doctest
-                                             mock_hal)
+                                             ${HAL_LIBRARY})
 target_include_directories(test_libv4repl
                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
