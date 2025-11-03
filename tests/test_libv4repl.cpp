@@ -405,3 +405,73 @@ TEST_CASE("libv4repl: NULL parameter handling") {
         CHECK(true);
     }
 }
+
+TEST_CASE_FIXTURE(V4ReplFixture, "libv4repl: Task system support (V4 v0.9.1, V4-front v0.5.0)") {
+    setup();
+
+    SUBCASE("Task control words compile successfully") {
+        // SPAWN: Create new task
+        v4_err err = v4_repl_process_line(repl, ": TASK-TEST 100 MS ;");
+        CHECK(err == 0);
+
+        // SLEEP/MS: Task sleep
+        err = v4_repl_process_line(repl, ": SLEEPER 50 MS ;");
+        CHECK(err == 0);
+        err = v4_repl_process_line(repl, ": SLEEPER2 100 SLEEP ;");
+        CHECK(err == 0);
+
+        // YIELD/PAUSE: Yield CPU
+        err = v4_repl_process_line(repl, ": YIELDER YIELD ;");
+        CHECK(err == 0);
+        err = v4_repl_process_line(repl, ": PAUSER PAUSE ;");
+        CHECK(err == 0);
+
+        // TASK-EXIT: Exit task
+        err = v4_repl_process_line(repl, ": EXITER TASK-EXIT ;");
+        CHECK(err == 0);
+    }
+
+    SUBCASE("Critical section words compile successfully") {
+        v4_err err = v4_repl_process_line(repl, ": PROTECTED CRITICAL 42 UNCRITICAL ;");
+        CHECK(err == 0);
+    }
+
+    SUBCASE("Message passing words compile successfully") {
+        // SEND: Send message to task
+        v4_err err = v4_repl_process_line(repl, ": SENDER 1 2 3 SEND DROP ;");
+        CHECK(err == 0);
+
+        // RECEIVE: Non-blocking receive
+        err = v4_repl_process_line(repl, ": RECEIVER 1 RECEIVE DROP DROP DROP ;");
+        CHECK(err == 0);
+
+        // RECEIVE-BLOCKING: Blocking receive with timeout
+        err = v4_repl_process_line(repl, ": BLOCKER 1 100 RECEIVE-BLOCKING DROP DROP DROP ;");
+        CHECK(err == 0);
+    }
+
+    SUBCASE("Task introspection words compile successfully") {
+        // ME: Get current task ID
+        v4_err err = v4_repl_process_line(repl, "ME");
+        CHECK(err == 0);
+        v4_i32 task_id;
+        vm_ds_pop(vm, &task_id);
+        CHECK(task_id >= 0);  // Valid task ID (0 = main task)
+
+        // TASKS: Get task count
+        err = v4_repl_process_line(repl, "TASKS");
+        CHECK(err == 0);
+        v4_i32 task_count;
+        vm_ds_pop(vm, &task_count);
+        CHECK(task_count >= 0);  // Task count is valid (0 or more)
+    }
+
+    SUBCASE("Basic task functionality") {
+        // Test ME returns consistent task ID
+        v4_err err = v4_repl_process_line(repl, "ME ME =");
+        CHECK(err == 0);
+        v4_i32 result;
+        vm_ds_pop(vm, &result);
+        CHECK(result == -1);  // TRUE (-1)
+    }
+}

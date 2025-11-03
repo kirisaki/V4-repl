@@ -321,6 +321,69 @@ v4> FALSE
  ok [1]: 0
 ```
 
+### Task System (V4 v0.9.1, V4-front v0.5.0)
+
+The V4 VM now includes a preemptive multitasking system with priority-based scheduling, supporting up to 8 concurrent tasks.
+
+#### Task Introspection
+
+```forth
+v4> ME
+ ok [1]: 0
+( Returns current task ID - 0 is the main task )
+
+v4> TASKS
+ ok [1]: 1
+( Returns number of active tasks )
+```
+
+#### Task Control
+
+```forth
+v4> : WORKER 100 MS ;
+ ok
+( Define a task that sleeps for 100ms )
+
+v4> 50 SLEEP
+ ok
+( Sleep for 50ms - SLEEP is an alias for MS )
+
+v4> YIELD
+ ok
+( Yield CPU to other tasks - PAUSE is also available )
+```
+
+#### Critical Sections
+
+```forth
+v4> : PROTECTED
+...   CRITICAL
+...   ( Protected code here )
+...   42
+...   UNCRITICAL
+... ;
+ ok
+( CRITICAL/UNCRITICAL protect shared resources )
+```
+
+#### Message Passing
+
+```forth
+v4> 1 2 3 SEND DROP
+ ok
+( Send message: target_task=1, msg_type=2, data=3 )
+
+v4> 1 RECEIVE DROP DROP DROP
+ ok
+( Non-blocking receive for msg_type=1 )
+
+v4> 1 100 RECEIVE-BLOCKING DROP DROP DROP
+ ok
+( Blocking receive with 100ms timeout )
+```
+
+**Note:** The task system is designed for embedded platforms with platform-specific timer implementations. In the REPL environment, task scheduling may require additional platform integration.
+
 ## Stack Display Format
 
 After each successful command, the stack is displayed as:

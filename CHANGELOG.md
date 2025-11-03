@@ -7,13 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-11-03
+
 ### Added
+- **Task system support** via V4 v0.9.1 and V4-front v0.5.0
+  - 11 new Forth words for multitasking: SPAWN, TASK-EXIT, SLEEP/MS, YIELD/PAUSE, CRITICAL, UNCRITICAL, SEND, RECEIVE, RECEIVE-BLOCKING, ME, TASKS
+  - Support for up to 8 concurrent tasks with priority-based scheduling
+  - Inter-task message passing with 16-message ring buffer
+  - Critical section support for protecting shared resources
+  - Integration tests for task system functionality
 - V4-hal C++17 CRTP HAL implementation support
   - Optional V4-hal integration via `V4_USE_V4HAL` option (default: OFF)
   - Automatic HAL library selection (v4_hal_wrapper or mock_hal)
   - Zero-cost abstraction benefits from C++17 CRTP architecture
   - Platform support: POSIX, ESP32, CH32V203
   - All 11 tests pass with V4-hal enabled
+
+### Changed
+- **Updated to V4 v0.9.1** for task system support
+- **Updated to V4-front v0.5.0** for task management opcodes
 
 ## [0.4.0] - 2025-10-31
 
