@@ -58,21 +58,34 @@ void MetaCommands::cmd_words() {
 }
 
 void MetaCommands::cmd_stack() {
-  int depth = vm_ds_depth_public(vm_);
+  int ds_depth = vm_ds_depth_public(vm_);
 
-  printf("Data Stack (depth: %d):\n", depth);
-  if (depth == 0) {
+  printf("Data Stack (depth: %d):\n", ds_depth);
+  if (ds_depth == 0) {
     printf("  <empty>\n");
   } else {
     // Print from bottom to top (index 0 = bottom)
-    for (int i = depth - 1; i >= 0; i--) {
+    for (int i = ds_depth - 1; i >= 0; i--) {
       v4_i32 val = vm_ds_peek_public(vm_, i);
-      printf("  [%d]: %d (0x%08X)\n", depth - 1 - i, val, (unsigned int) val);
+      printf("  [%d]: %d (0x%08X)\n", ds_depth - 1 - i, val, (unsigned int) val);
     }
   }
 
-  // TODO: Add return stack display when V4-core API is available
-  printf("\nReturn Stack: <not yet implemented>\n");
+  // Return stack display
+  int rs_depth = vm_rs_depth_public(vm_);
+  printf("\nReturn Stack (depth: %d):\n", rs_depth);
+  if (rs_depth == 0) {
+    printf("  <empty>\n");
+  } else {
+    // Get return stack contents
+    v4_i32 rs_data[64];  // Max return stack size
+    int count = vm_rs_copy_to_array(vm_, rs_data, 64);
+
+    // Print from bottom to top
+    for (int i = count - 1; i >= 0; i--) {
+      printf("  [%d]: 0x%08X\n", count - 1 - i, (unsigned int) rs_data[i]);
+    }
+  }
 }
 
 void MetaCommands::cmd_reset() {
@@ -82,11 +95,10 @@ void MetaCommands::cmd_reset() {
 }
 
 void MetaCommands::cmd_memory() {
-  // TODO: Implement when V4-core provides memory usage API
   printf("Memory usage information:\n");
   printf("  VM memory size: (not yet available from V4-core)\n");
-  printf("  Data stack depth: %d\n", vm_ds_depth_public(vm_));
-  printf("  Return stack depth: (API not yet available)\n");
+  printf("  Data stack depth: %d / 256\n", vm_ds_depth_public(vm_));
+  printf("  Return stack depth: %d / 64\n", vm_rs_depth_public(vm_));
   printf("  Registered words: %d\n", v4front_context_get_word_count(ctx_));
 }
 
