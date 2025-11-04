@@ -85,7 +85,7 @@ To port V4-REPL to a new platform, you need:
 3. **Memory** - Minimum 16KB RAM for VM + compiler
 4. **Build System** - CMake or platform-specific toolchain
 
-See the [V4 HAL API documentation](https://github.com/kirisaki/V4/blob/main/docs/hal-api.md) for HAL interface specification.
+See the [V4 HAL API documentation](https://github.com/V4-project/V4-engine/blob/main/docs/hal-api.md) for HAL interface specification.
 
 ## Contributing
 
@@ -94,6 +94,6 @@ Platform ports are welcome! Please submit to [V4-ports](https://github.com/kiris
 ---
 
 **Related Projects**:
-- [V4](https://github.com/kirisaki/V4) - VM core implementation
+- [V4 Engine](https://github.com/V4-project/V4-engine) - VM core implementation
 - [V4-front](https://github.com/kirisaki/V4-front) - Forth compiler frontend
 - [V4-ports](https://github.com/kirisaki/V4-ports) - Platform HAL implementations

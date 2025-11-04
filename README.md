@@ -1,6 +1,6 @@
 # V4 REPL
 
-Interactive Forth REPL for the V4 virtual machine.
+Interactive Forth REPL for the V4 Engine.
 
 ## Features
 
@@ -33,7 +33,7 @@ Interactive Forth REPL for the V4 virtual machine.
 
 - C++17 compiler
 - CMake 3.15 or later
-- V4 VM library
+- V4 Engine library
 - V4-front compiler library
 - linenoise (fetched automatically)
 

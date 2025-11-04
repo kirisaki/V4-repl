@@ -13,8 +13,8 @@ option(WITH_FILESYSTEM "Enable filesystem support (history file)" ON)
 option(V4_USE_V4HAL "Use V4-hal C++17 CRTP HAL implementation" OFF)
 
 set(V4_LOCAL_PATH
-    "${CMAKE_CURRENT_SOURCE_DIR}/../V4"
-    CACHE PATH "Path to local V4 source")
+    "${CMAKE_CURRENT_SOURCE_DIR}/../V4-engine"
+    CACHE PATH "Path to local V4 Engine source")
 set(V4FRONT_LOCAL_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/../V4-front"
     CACHE PATH "Path to local V4-front source")
@@ -73,7 +73,7 @@ target_include_directories(
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-target_link_libraries(v4repl PUBLIC v4vm v4front)
+target_link_libraries(v4repl PUBLIC v4engine v4front)
 
 # Main executable (C++ REPL - cross-platform)
 add_executable(v4-repl src/main.cpp src/repl.cpp src/meta_commands.cpp)
@@ -91,12 +91,12 @@ endif()
 
 if(UNIX)
   # Unix: link with linenoise for fancy line editing
-  target_link_libraries(v4-repl PRIVATE v4vm v4front linenoise_lib
+  target_link_libraries(v4-repl PRIVATE v4engine v4front linenoise_lib
                                         ${HAL_LIBRARY})
   message(STATUS "Building v4-repl executable (Unix with linenoise)")
 else()
   # Windows: no linenoise, use simple std::getline
-  target_link_libraries(v4-repl PRIVATE v4vm v4front ${HAL_LIBRARY})
+  target_link_libraries(v4-repl PRIVATE v4engine v4front ${HAL_LIBRARY})
   message(STATUS "Building v4-repl executable (Windows with simple input)")
 endif()
 
@@ -107,7 +107,7 @@ endif()
 
 # libv4repl tests (using doctest)
 add_executable(test_libv4repl tests/test_libv4repl.cpp)
-target_link_libraries(test_libv4repl PRIVATE v4repl v4vm doctest::doctest
+target_link_libraries(test_libv4repl PRIVATE v4repl v4engine doctest::doctest
                                              ${HAL_LIBRARY})
 target_include_directories(test_libv4repl
                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

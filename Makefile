@@ -1,7 +1,7 @@
 .PHONY: all build build-fetch build-no-fs release run test test-unit test-all clean format format-check size size-report help
 
-# Default paths for local V4 and V4-front
-V4_PATH ?= ../V4
+# Default paths for local V4 Engine and V4-front
+V4_PATH ?= ../V4-engine
 V4FRONT_PATH ?= ../V4-front
 V4_USE_V4HAL ?= OFF
 
