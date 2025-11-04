@@ -23,6 +23,8 @@ bool MetaCommands::execute(const char* line) {
     cmd_words();
   } else if (strncmp(line, "stack", 5) == 0 && (line[5] == '\0' || line[5] == ' ')) {
     cmd_stack();
+  } else if (strncmp(line, "rstack", 6) == 0 && (line[6] == '\0' || line[6] == ' ')) {
+    cmd_rstack();
   } else if (strncmp(line, "reset", 5) == 0 && (line[5] == '\0' || line[5] == ' ')) {
     cmd_reset();
   } else if (strncmp(line, "memory", 6) == 0 && (line[6] == '\0' || line[6] == ' ')) {
@@ -88,6 +90,33 @@ void MetaCommands::cmd_stack() {
   }
 }
 
+void MetaCommands::cmd_rstack() {
+  int rs_depth = vm_rs_depth_public(vm_);
+
+  printf("Return Stack (depth: %d / 64):\n", rs_depth);
+  if (rs_depth == 0) {
+    printf("  <empty>\n");
+    return;
+  }
+
+  // Get return stack contents
+  v4_i32 rs_data[64];  // Max return stack size
+  int count = vm_rs_copy_to_array(vm_, rs_data, 64);
+
+  printf("\nCall trace (most recent first):\n");
+  for (int i = count - 1; i >= 0; i--) {
+    printf("  [%2d]: 0x%08X", count - 1 - i, (unsigned int) rs_data[i]);
+
+    // Try to resolve address to word name (if it's a return address)
+    // TODO: Add word lookup by code address when V4-front API is available
+
+    printf("\n");
+  }
+
+  printf("\nNote: Values shown are return addresses from function calls.\n");
+  printf("      Use .stack to see both data and return stacks together.\n");
+}
+
 void MetaCommands::cmd_reset() {
   vm_reset(vm_);
   v4front_context_reset(ctx_);
@@ -108,7 +137,8 @@ void MetaCommands::cmd_help() {
 
   printf("Meta-commands:\n");
   printf("  .words     - List all defined words\n");
-  printf("  .stack     - Show detailed stack contents (hex and decimal)\n");
+  printf("  .stack     - Show data and return stack contents\n");
+  printf("  .rstack    - Show return stack with call trace\n");
   printf("  .reset     - Reset VM and compiler context\n");
   printf("  .memory    - Show memory usage statistics\n");
   printf("  .help      - Show this help message\n");

@@ -8,9 +8,10 @@
  *
  * Provides dot-commands for inspecting and controlling the REPL state:
  * - .words    : List all defined words
- * - .stack    : Show detailed stack contents
+ * - .stack    : Show data and return stack contents
+ * - .rstack   : Show return stack with call trace
  * - .reset    : Reset VM and compiler context
- * - .memory   : Show memory usage (TODO: requires V4-core API)
+ * - .memory   : Show memory usage statistics
  * - .help     : Show help message
  * - .version  : Show version information
  */
@@ -38,6 +39,7 @@ class MetaCommands {
 
   void cmd_words();
   void cmd_stack();
+  void cmd_rstack();
   void cmd_reset();
   void cmd_memory();
   void cmd_help();
