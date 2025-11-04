@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <v4/internal/vm.h>  // For Word structure definition
 
 MetaCommands::MetaCommands(struct Vm* vm, V4FrontContext* ctx) : vm_(vm), ctx_(ctx) {}
 
@@ -28,6 +29,8 @@ bool MetaCommands::execute(const char* line) {
     cmd_rstack();
   } else if (strncmp(line, "dump", 4) == 0 && (line[4] == '\0' || line[4] == ' ')) {
     cmd_dump(line + 4);  // Pass arguments after "dump"
+  } else if (strncmp(line, "see", 3) == 0 && (line[3] == '\0' || line[3] == ' ')) {
+    cmd_see(line + 3);  // Pass arguments after "see"
   } else if (strncmp(line, "reset", 5) == 0 && (line[5] == '\0' || line[5] == ' ')) {
     cmd_reset();
   } else if (strncmp(line, "memory", 6) == 0 && (line[6] == '\0' || line[6] == ' ')) {
@@ -192,6 +195,64 @@ void MetaCommands::cmd_dump(const char* args) {
   printf("\nNext: .dump (continues from 0x%08X)\n", last_dump_addr_);
 }
 
+void MetaCommands::cmd_see(const char* args) {
+  // Parse word name from arguments
+  while (*args == ' ') args++;  // Skip leading spaces
+
+  if (*args == '\0') {
+    printf("Usage: .see <word_name>\n");
+    printf("Example: .see SQUARE\n");
+    return;
+  }
+
+  // Extract word name (up to first space or end of string)
+  char word_name[64];
+  int i = 0;
+  while (*args && *args != ' ' && i < 63) {
+    word_name[i++] = *args++;
+  }
+  word_name[i] = '\0';
+
+  // Find word in compiler context
+  int vm_idx = v4front_context_find_word(ctx_, word_name);
+  if (vm_idx < 0) {
+    printf("Word '%s' not found.\n", word_name);
+    printf("Use .words to see all defined words.\n");
+    return;
+  }
+
+  // Get word from VM
+  Word* word = vm_get_word(vm_, vm_idx);
+  if (!word || !word->code || word->code_len == 0) {
+    printf("Word '%s' has no bytecode.\n", word_name);
+    return;
+  }
+
+  // Display word header
+  printf("Word: %s\n", word_name);
+  printf("VM index: %d\n", vm_idx);
+  printf("Bytecode length: %d bytes\n", word->code_len);
+  printf("\nDisassembly:\n");
+  printf("Offset  Bytes                    \n");
+  printf("------  -------------------------\n");
+
+  // Display bytecode in hex (16 bytes per line)
+  const uint8_t* code = word->code;
+  for (uint32_t offset = 0; offset < word->code_len; offset += 16) {
+    printf("%04X    ", offset);
+
+    // Print hex bytes
+    for (uint32_t i = 0; i < 16 && (offset + i) < word->code_len; i++) {
+      printf("%02X ", code[offset + i]);
+    }
+
+    printf("\n");
+  }
+
+  printf("\nNote: Use V4-front disassembler for opcode names.\n");
+  printf("      Bytecode is in V4 instruction format.\n");
+}
+
 void MetaCommands::cmd_reset() {
   vm_reset(vm_);
   v4front_context_reset(ctx_);
@@ -216,6 +277,7 @@ void MetaCommands::cmd_help() {
   printf("  .stack              - Show data and return stack contents\n");
   printf("  .rstack             - Show return stack with call trace\n");
   printf("  .dump [addr] [len]  - Hexdump memory (default: continue from last)\n");
+  printf("  .see <word>         - Show word bytecode disassembly\n");
   printf("  .reset              - Reset VM and compiler context\n");
   printf("  .memory             - Show memory usage statistics\n");
   printf("  .help               - Show this help message\n");

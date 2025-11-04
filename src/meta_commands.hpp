@@ -11,6 +11,7 @@
  * - .stack              : Show data and return stack contents
  * - .rstack             : Show return stack with call trace
  * - .dump [addr] [len]  : Hexdump memory (default: continue from last)
+ * - .see <word>         : Show word bytecode disassembly
  * - .reset              : Reset VM and compiler context
  * - .memory             : Show memory usage statistics
  * - .help               : Show help message
@@ -43,6 +44,7 @@ class MetaCommands {
   void cmd_stack();
   void cmd_rstack();
   void cmd_dump(const char* args);
+  void cmd_see(const char* args);
   void cmd_reset();
   void cmd_memory();
   void cmd_help();
