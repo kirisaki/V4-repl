@@ -7,13 +7,14 @@
  * @brief Meta-command handler for V4 REPL
  *
  * Provides dot-commands for inspecting and controlling the REPL state:
- * - .words    : List all defined words
- * - .stack    : Show data and return stack contents
- * - .rstack   : Show return stack with call trace
- * - .reset    : Reset VM and compiler context
- * - .memory   : Show memory usage statistics
- * - .help     : Show help message
- * - .version  : Show version information
+ * - .words              : List all defined words
+ * - .stack              : Show data and return stack contents
+ * - .rstack             : Show return stack with call trace
+ * - .dump [addr] [len]  : Hexdump memory (default: continue from last)
+ * - .reset              : Reset VM and compiler context
+ * - .memory             : Show memory usage statistics
+ * - .help               : Show help message
+ * - .version            : Show version information
  */
 class MetaCommands {
  public:
@@ -36,10 +37,12 @@ class MetaCommands {
  private:
   struct Vm* vm_;
   V4FrontContext* ctx_;
+  v4_u32 last_dump_addr_ = 0;  // Track last dump address for continuation
 
   void cmd_words();
   void cmd_stack();
   void cmd_rstack();
+  void cmd_dump(const char* args);
   void cmd_reset();
   void cmd_memory();
   void cmd_help();

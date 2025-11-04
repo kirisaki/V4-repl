@@ -1,6 +1,7 @@
 #include "meta_commands.hpp"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 MetaCommands::MetaCommands(struct Vm* vm, V4FrontContext* ctx) : vm_(vm), ctx_(ctx) {}
@@ -25,6 +26,8 @@ bool MetaCommands::execute(const char* line) {
     cmd_stack();
   } else if (strncmp(line, "rstack", 6) == 0 && (line[6] == '\0' || line[6] == ' ')) {
     cmd_rstack();
+  } else if (strncmp(line, "dump", 4) == 0 && (line[4] == '\0' || line[4] == ' ')) {
+    cmd_dump(line + 4);  // Pass arguments after "dump"
   } else if (strncmp(line, "reset", 5) == 0 && (line[5] == '\0' || line[5] == ' ')) {
     cmd_reset();
   } else if (strncmp(line, "memory", 6) == 0 && (line[6] == '\0' || line[6] == ' ')) {
@@ -117,10 +120,83 @@ void MetaCommands::cmd_rstack() {
   printf("      Use .stack to see both data and return stacks together.\n");
 }
 
+void MetaCommands::cmd_dump(const char* args) {
+  v4_u32 addr = last_dump_addr_;
+  v4_u32 length = 256;  // Default: 256 bytes
+
+  // Parse arguments: .dump [addr] [length]
+  while (*args == ' ') args++;  // Skip leading spaces
+
+  if (*args != '\0') {
+    // Parse address
+    char* end;
+    addr = (v4_u32)strtoul(args, &end, 0);  // Auto-detect hex (0x prefix) or decimal
+    args = end;
+
+    while (*args == ' ') args++;  // Skip spaces
+
+    if (*args != '\0') {
+      // Parse length
+      length = (v4_u32)strtoul(args, &end, 0);
+    }
+  }
+
+  // Align address to 4-byte boundary for cleaner output
+  v4_u32 aligned_addr = addr & ~3;
+
+  printf("Memory dump at 0x%08X (%u bytes):\n", aligned_addr, length);
+  printf("Address   +0 +1 +2 +3  +4 +5 +6 +7  +8 +9 +A +B  +C +D +E +F  ASCII\n");
+  printf("--------  -----------  -----------  -----------  -----------  ----------------\n");
+
+  for (v4_u32 offset = 0; offset < length; offset += 16) {
+    printf("%08X  ", aligned_addr + offset);
+
+    // Read and display 16 bytes in hex
+    v4_u8 bytes[16];
+    for (int i = 0; i < 16; i++) {
+      v4_u32 byte_addr = aligned_addr + offset + i;
+      v4_u32 word;
+
+      // Read 32-bit word (VM memory API works in 32-bit units)
+      v4_err err = vm_mem_read32(vm_, byte_addr & ~3, &word);
+
+      if (err == 0) {
+        // Extract the byte from the word (little-endian)
+        int byte_pos = byte_addr & 3;
+        bytes[i] = (word >> (byte_pos * 8)) & 0xFF;
+        printf("%02X ", bytes[i]);
+      } else {
+        bytes[i] = 0;
+        printf("?? ");
+      }
+
+      // Add spacing every 4 bytes
+      if ((i & 3) == 3) printf(" ");
+    }
+
+    // Display ASCII representation
+    printf(" ");
+    for (int i = 0; i < 16; i++) {
+      char c = bytes[i];
+      printf("%c", (c >= 32 && c < 127) ? c : '.');
+    }
+    printf("\n");
+
+    // Stop if we've gone beyond requested length
+    if (offset + 16 >= length) break;
+  }
+
+  // Update last dump address for next invocation
+  last_dump_addr_ = aligned_addr + ((length + 15) & ~15);  // Round up to next 16-byte boundary
+
+  printf("\nNext: .dump (continues from 0x%08X)\n", last_dump_addr_);
+}
+
 void MetaCommands::cmd_reset() {
   vm_reset(vm_);
   v4front_context_reset(ctx_);
   printf("VM and compiler context reset.\n");
+  last_dump_addr_ = 0;  // Reset dump address too
 }
 
 void MetaCommands::cmd_memory() {
@@ -136,13 +212,14 @@ void MetaCommands::cmd_help() {
   printf("════════════════════════════════════════════════════════════════\n\n");
 
   printf("Meta-commands:\n");
-  printf("  .words     - List all defined words\n");
-  printf("  .stack     - Show data and return stack contents\n");
-  printf("  .rstack    - Show return stack with call trace\n");
-  printf("  .reset     - Reset VM and compiler context\n");
-  printf("  .memory    - Show memory usage statistics\n");
-  printf("  .help      - Show this help message\n");
-  printf("  .version   - Show REPL and component versions\n");
+  printf("  .words              - List all defined words\n");
+  printf("  .stack              - Show data and return stack contents\n");
+  printf("  .rstack             - Show return stack with call trace\n");
+  printf("  .dump [addr] [len]  - Hexdump memory (default: continue from last)\n");
+  printf("  .reset              - Reset VM and compiler context\n");
+  printf("  .memory             - Show memory usage statistics\n");
+  printf("  .help               - Show this help message\n");
+  printf("  .version            - Show REPL and component versions\n");
 
   printf("\nPASTE mode (multi-line input):\n");
   printf("  <<<        - Enter PASTE mode for multi-line definitions\n");
