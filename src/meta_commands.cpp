@@ -1,9 +1,10 @@
 #include "meta_commands.hpp"
 
+#include <v4/internal/vm.h>  // For Word structure definition
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <v4/internal/vm.h>  // For Word structure definition
 
 MetaCommands::MetaCommands(struct Vm* vm, V4FrontContext* ctx) : vm_(vm), ctx_(ctx) {}
 
@@ -128,19 +129,21 @@ void MetaCommands::cmd_dump(const char* args) {
   v4_u32 length = 256;  // Default: 256 bytes
 
   // Parse arguments: .dump [addr] [length]
-  while (*args == ' ') args++;  // Skip leading spaces
+  while (*args == ' ')
+    args++;  // Skip leading spaces
 
   if (*args != '\0') {
     // Parse address
     char* end;
-    addr = (v4_u32)strtoul(args, &end, 0);  // Auto-detect hex (0x prefix) or decimal
+    addr = (v4_u32) strtoul(args, &end, 0);  // Auto-detect hex (0x prefix) or decimal
     args = end;
 
-    while (*args == ' ') args++;  // Skip spaces
+    while (*args == ' ')
+      args++;  // Skip spaces
 
     if (*args != '\0') {
       // Parse length
-      length = (v4_u32)strtoul(args, &end, 0);
+      length = (v4_u32) strtoul(args, &end, 0);
     }
   }
 
@@ -174,7 +177,8 @@ void MetaCommands::cmd_dump(const char* args) {
       }
 
       // Add spacing every 4 bytes
-      if ((i & 3) == 3) printf(" ");
+      if ((i & 3) == 3)
+        printf(" ");
     }
 
     // Display ASCII representation
@@ -186,7 +190,8 @@ void MetaCommands::cmd_dump(const char* args) {
     printf("\n");
 
     // Stop if we've gone beyond requested length
-    if (offset + 16 >= length) break;
+    if (offset + 16 >= length)
+      break;
   }
 
   // Update last dump address for next invocation
@@ -197,7 +202,8 @@ void MetaCommands::cmd_dump(const char* args) {
 
 void MetaCommands::cmd_see(const char* args) {
   // Parse word name from arguments
-  while (*args == ' ') args++;  // Skip leading spaces
+  while (*args == ' ')
+    args++;  // Skip leading spaces
 
   if (*args == '\0') {
     printf("Usage: .see <word_name>\n");

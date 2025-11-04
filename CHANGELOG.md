@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Enhanced debugging meta-commands**
+  - `.stack` now displays both data stack and return stack together
+  - `.rstack` - dedicated return stack view with call trace information
+  - `.dump [addr] [len]` - memory hexdump with auto-continuation (default: 256 bytes)
+  - `.see <word>` - bytecode disassembly for user-defined words
+- **Improved REPL introspection capabilities**
+  - Memory inspection with hex and ASCII display (16 bytes per row)
+  - Word bytecode inspection for debugging compiled definitions
+  - Return address tracking for call trace analysis
+
+### Changed
+- **Updated to V4-engine v0.12.0** for panic handler support and return stack APIs
+
 ## [0.5.0] - 2025-11-03
 
 ### Added
