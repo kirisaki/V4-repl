@@ -192,7 +192,8 @@ Data Stack (depth: 3):
   [1]: 20 (0x00000014)
   [2]: 30 (0x0000001E)
 
-Return Stack: <not yet implemented>
+Return Stack (depth: 0):
+  <empty>
  ok [3]: 10 20 30
 
 v4> .help
@@ -419,7 +420,10 @@ If the stack is empty:
 ### Meta-Commands
 - `.help` - Show comprehensive help
 - `.words` - List all defined words
-- `.stack` - Show detailed stack contents
+- `.stack` - Show detailed data and return stack contents
+- `.rstack` - Show return stack only
+- `.dump <addr> <len>` - Dump memory region (hex addresses)
+- `.see <word>` - Show word definition
 - `.reset` - Reset VM and compiler context
 - `.memory` - Show memory usage statistics
 - `.version` - Show version information
